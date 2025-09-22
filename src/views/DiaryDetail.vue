@@ -1,20 +1,22 @@
 <template>
   <section class="view-container">
-    <header class="view-header">
-      <div>
+    <header class="detail-header">
+      <div class="detail-header-bar">
+        <button type="button" class="button ghost" @click="goBack">← 返回列表</button>
+        <div class="header-actions" v-if="diary">
+          <RouterLink :to="`/diary/${diary.id}/edit`" class="button primary">编辑</RouterLink>
+          <button type="button" class="button danger" @click="handleDelete">删除</button>
+        </div>
+      </div>
+      <div class="detail-header-text">
         <h2>情绪日记详情</h2>
         <p v-if="diary" class="view-subtitle">记录于 {{ formatDate(diary.createdAt) }} · 主要情绪：{{ diary.feeling }}</p>
-      </div>
-      <div class="header-actions">
-        <RouterLink v-if="diary" :to="`/diary/${diary.id}/edit`" class="button primary">修改</RouterLink>
-        <button v-if="diary" type="button" class="button danger" @click="handleDelete">删除</button>
-        <button type="button" class="button" @click="goBack">返回</button>
       </div>
     </header>
 
     <div v-if="!diary" class="empty-state">
       <p>找不到对应的日记，可能已经被删除。</p>
-      <RouterLink to="/" class="button">返回列表</RouterLink>
+      <RouterLink to="/" class="button ghost">返回列表</RouterLink>
     </div>
 
     <article v-else class="diary-detail">

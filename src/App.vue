@@ -12,6 +12,14 @@
     <main class="app-main">
       <RouterView />
     </main>
+    <RouterLink
+      to="/new"
+      class="floating-action"
+      aria-label="添加新的情绪日记"
+    >
+      <span aria-hidden="true">＋</span>
+      <span class="floating-action-text">记录新日记</span>
+    </RouterLink>
   </div>
 </template>
 

@@ -9,7 +9,9 @@
     </header>
 
     <div v-if="!diaries.length" class="empty-state">
-      <p>还没有日记，点击“新建日记”开始记录你的第一条情绪日记。</p>
+      <h3>欢迎开启你的情绪疗愈之旅</h3>
+      <p>当情绪在心底泛起波澜，不妨写下来。点击下方按钮，记录第一条日记。</p>
+      <RouterLink to="/new" class="button primary">马上记录</RouterLink>
     </div>
 
     <ul v-else class="diary-list">
