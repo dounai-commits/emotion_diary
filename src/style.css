@@ -374,7 +374,6 @@ body {
 
 .form-field input:focus,
 .form-field textarea:focus {
-  outline: none;
   border-color: #f59e0b;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
   background: #ffffff;
