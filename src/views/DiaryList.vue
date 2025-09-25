@@ -90,17 +90,29 @@ function formatDate(value) {
 }
 
 function extractTags(entry) {
-  if (!entry || !entry.emotions) {
+  if (!entry) {
     return [];
   }
 
-  const presetTags = new Set([...(entry.psychological || []), ...(entry.physiological || [])]);
+  const presetTags = [...(entry.psychological || []), ...(entry.physiological || [])]
+    .map(tag => (typeof tag === 'string' ? tag.trim() : ''))
+    .filter(Boolean);
 
-  return entry.emotions
+  const manualTags = (entry.emotions || '')
     .split(',')
     .map(tag => tag.trim())
-    .filter(tag => tag && !presetTags.has(tag))
-    .slice(0, 3);
+    .filter(Boolean);
+
+  const seen = new Set();
+
+  return [...manualTags, ...presetTags].filter(tag => {
+    if (seen.has(tag)) {
+      return false;
+    }
+
+    seen.add(tag);
+    return true;
+  });
 }
 
 function requestDelete(id) {
