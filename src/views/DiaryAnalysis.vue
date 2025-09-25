@@ -168,6 +168,73 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function appendAssistantReply(reply) {
+  const segments = splitAssistantReply(reply);
+  const payloads = segments.length ? segments : [reply].filter(Boolean);
+  let lastMessageId = '';
+
+  payloads.forEach(text => {
+    const content = text.trim();
+    if (!content) {
+      return;
+    }
+
+    const assistantMessage = { id: createMessageId(), role: 'assistant', text: content };
+    messages.value.push(assistantMessage);
+    lastMessageId = assistantMessage.id;
+  });
+
+  if (lastMessageId) {
+    scrollToMessage(lastMessageId, 'end');
+  }
+}
+
+function splitAssistantReply(text) {
+  if (!text) {
+    return [];
+  }
+
+  const normalized = text.replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const bubbleLabel = /(^|\n+)\s*\(?（?气泡\s*[0-9０-９]+[)）]?\s*[：:.-]?\s*/g;
+  const segments = [];
+  let match = null;
+  let lastContentStart = 0;
+
+  while ((match = bubbleLabel.exec(normalized)) !== null) {
+    const labelStart = match.index;
+    if (labelStart > lastContentStart) {
+      const previous = normalized.slice(lastContentStart, labelStart).trim();
+      if (previous) {
+        segments.push(previous);
+      }
+    }
+
+    lastContentStart = bubbleLabel.lastIndex;
+  }
+
+  const tail = normalized.slice(lastContentStart).trim();
+  if (tail) {
+    segments.push(tail);
+  }
+
+  if (segments.length <= 1) {
+    const fallback = normalized
+      .split(/\n{2,}/)
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    if (fallback.length >= 2 && fallback.length <= 6) {
+      return fallback;
+    }
+  }
+
+  return segments;
+}
+
 watch(
   diary,
   value => {
@@ -227,11 +294,9 @@ async function runInitialAnalysis() {
 
   try {
     const reply = await requestOpenAI(conversation.value);
-    const assistantMessage = { id: createMessageId(), role: 'assistant', text: reply };
-    messages.value.push(assistantMessage);
+    appendAssistantReply(reply);
     conversation.value.push({ role: 'assistant', content: reply });
     analysisError.value = '';
-    scrollToMessage(assistantMessage.id, 'end');
   } catch (error) {
     analysisError.value = formatError(error);
   } finally {
@@ -343,11 +408,9 @@ async function submitQuestion() {
 
   try {
     const reply = await requestOpenAI(conversation.value);
-    const assistantMessage = { id: createMessageId(), role: 'assistant', text: reply };
-    messages.value.push(assistantMessage);
+    appendAssistantReply(reply);
     conversation.value.push({ role: 'assistant', content: reply });
     analysisError.value = '';
-    scrollToMessage(assistantMessage.id, 'end');
   } catch (error) {
     analysisError.value = formatError(error);
   } finally {
