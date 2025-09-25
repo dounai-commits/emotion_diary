@@ -31,7 +31,12 @@
             :data-message-id="message.id"
           >
             <div class="message-icon" v-if="message.role === 'assistant'">✨</div>
-            <div class="message-content">{{ message.text }}</div>
+            <div
+              v-if="message.role === 'assistant'"
+              class="message-content"
+              v-html="renderMessage(message.text)"
+            ></div>
+            <div v-else class="message-content message-content--plain">{{ message.text }}</div>
           </div>
 
           <div v-if="isLoading" class="message assistant pending">
@@ -62,6 +67,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
+import { marked } from 'marked';
 import { useDiaryStore } from '../stores/diaryStore.js';
 import { useSettingsStore } from '../stores/settingsStore.js';
 import { getMoodMeta } from '../utils/moods.js';
@@ -84,6 +90,13 @@ const messageList = ref(null);
 const conversation = ref([]);
 const isLoading = ref(false);
 const analysisError = ref('');
+
+marked.use({
+  gfm: true,
+  breaks: true,
+  headerIds: false,
+  mangle: false,
+});
 
 const SYSTEM_PROMPT = `你是一个中文情绪教练型 AI，负责分析一篇用户的情绪日志，日志包含（字段可能缺失或混杂）：{事实}、{感受}、{想法}、{行为}、{结果}。你的目标是：帮助用户缓解当下困扰；教会更清晰地书写情绪日志（分清事实/感受/想法）；洞察背后的思维惯性与需求；提出面向明天的微小可行步骤。保持共情、简洁、直接，给出明确观点与首要假设，但避免武断。
 
@@ -274,6 +287,21 @@ async function requestOpenAI(payload) {
   }
 
   return content.trim();
+}
+
+function renderMessage(text) {
+  if (!text) {
+    return '';
+  }
+
+  return marked.parse(escapeHtml(text));
+}
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function goBack() {
