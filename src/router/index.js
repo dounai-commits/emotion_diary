@@ -3,6 +3,7 @@ import DiaryList from '../views/DiaryList.vue';
 import DiaryForm from '../views/DiaryForm.vue';
 import DiaryDetail from '../views/DiaryDetail.vue';
 import DiaryAnalysis from '../views/DiaryAnalysis.vue';
+import Settings from '../views/Settings.vue';
 
 const routes = [
   {
@@ -33,6 +34,11 @@ const routes = [
     name: 'diaryAnalysis',
     component: DiaryAnalysis,
     props: true,
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: Settings,
   },
   {
     path: '/:pathMatch(.*)*',

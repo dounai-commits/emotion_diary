@@ -53,7 +53,12 @@
 
         <label class="form-field">
           <span>Fact</span>
-          <input v-model.trim="form.fact" type="text" placeholder="e.g., I had an argument with my partner." required />
+          <textarea
+            v-model.trim="form.fact"
+            rows="3"
+            placeholder="e.g., I had an argument with my partner."
+            required
+          ></textarea>
         </label>
 
         <label class="form-field">

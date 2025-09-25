@@ -2,7 +2,12 @@
   <div class="page home-page">
     <div class="page-inner">
       <header class="home-hero">
-        <h1>Mood Log</h1>
+        <div class="home-hero-top">
+          <h1>Mood Log</h1>
+          <RouterLink to="/settings" class="icon-button" aria-label="Open settings">
+            <span aria-hidden="true">⚙️</span>
+          </RouterLink>
+        </div>
         <p>Track how you feel and notice patterns over time.</p>
       </header>
 
@@ -89,10 +94,12 @@ function extractTags(entry) {
     return [];
   }
 
+  const presetTags = new Set([...(entry.psychological || []), ...(entry.physiological || [])]);
+
   return entry.emotions
     .split(',')
     .map(tag => tag.trim())
-    .filter(Boolean)
+    .filter(tag => tag && !presetTags.has(tag))
     .slice(0, 3);
 }
 

@@ -64,10 +64,16 @@ button {
 }
 
 .home-hero {
-  text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.home-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .home-hero h1 {
@@ -315,6 +321,53 @@ button {
   flex-direction: column;
   gap: 20px;
   box-shadow: 0 24px 60px rgba(31, 26, 23, 0.08);
+}
+
+.settings-card {
+  gap: 18px;
+  text-align: left;
+}
+
+.settings-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-intro h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #463c35;
+}
+
+.settings-intro p {
+  margin: 0;
+  color: #6e655f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #857b73;
+}
+
+.settings-hint a {
+  color: #b47b1b;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .section-heading {
@@ -625,16 +678,31 @@ button {
 .analysis-layout {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  min-height: 520px;
+  gap: 16px;
+  min-height: 480px;
   flex: 1;
   position: relative;
+}
+
+.analysis-alert {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(73, 63, 56, 0.08);
+  color: #5c524a;
+}
+
+.analysis-alert.error {
+  background: rgba(255, 117, 117, 0.18);
+  color: #b91c1c;
 }
 
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   flex: 1;
   overflow-y: auto;
   padding-right: 4px;
@@ -663,6 +731,11 @@ button {
   background: rgba(255, 240, 209, 0.7);
 }
 
+.message.pending .message-content {
+  font-style: italic;
+  color: #6e655f;
+}
+
 .message.user {
   grid-template-columns: 1fr;
   justify-items: end;
@@ -683,16 +756,16 @@ button {
 
 .analysis-input {
   position: sticky;
-  bottom: 24px;
+  bottom: 12px;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 16px 18px;
-  border-radius: 26px;
+  padding: 12px 16px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 28px 60px rgba(31, 26, 23, 0.18);
-  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 48px rgba(31, 26, 23, 0.16);
+  backdrop-filter: blur(14px);
   z-index: 5;
   margin-top: auto;
 }
