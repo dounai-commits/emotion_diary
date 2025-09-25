@@ -1,59 +1,125 @@
 <template>
-  <section class="view-container">
-    <header class="view-header">
-      <div>
-        <h2>{{ isEdit ? '编辑情绪日记' : '新建情绪日记' }}</h2>
-        <p class="view-subtitle">从事件到后果，完整记录让你更了解当下的自己。</p>
-      </div>
-    </header>
+  <div class="page form-page">
+    <div class="page-inner">
+      <header class="page-header">
+        <button type="button" class="icon-button" @click="goBack">
+          <span aria-hidden="true">←</span>
+          <span class="sr-only">Back</span>
+        </button>
+        <h1>{{ isEdit ? 'Edit Log' : 'New Log' }}</h1>
+        <div class="header-spacer" aria-hidden="true"></div>
+      </header>
 
-    <div v-if="missingDiary" class="empty-state">
-      <p>未找到对应的日记，可能已被删除。</p>
-      <RouterLink to="/" class="button">返回日记列表</RouterLink>
-    </div>
+      <section v-if="missingDiary" class="missing-card">
+        <p>We couldn’t find this log. It may have been removed.</p>
+        <RouterLink to="/" class="primary-button ghost">Back to list</RouterLink>
+      </section>
 
-    <form v-else class="diary-form" @submit.prevent="handleSubmit">
-      <div class="form-grid">
+      <form v-else class="form-card" @submit.prevent="handleSubmit">
+        <div class="section-heading">How are you feeling?</div>
+        <div class="mood-selector">
+          <button
+            v-for="option in moodOptions"
+            :key="option.value"
+            type="button"
+            class="mood-pill"
+            :class="{ active: form.mood === option.value }"
+            @click="form.mood = option.value"
+          >
+            <span class="mood-icon">{{ option.icon }}</span>
+            <span>{{ option.label }}</span>
+          </button>
+        </div>
+
         <label class="form-field">
-          <span>创建时间</span>
+          <span>Fact</span>
+          <input v-model.trim="form.fact" type="text" placeholder="e.g., I had an argument with my partner." required />
+        </label>
+
+        <label class="form-field">
+          <span>Emotions</span>
+          <textarea
+            v-model.trim="form.emotions"
+            rows="2"
+            placeholder="e.g., Sad, Anxious, Heart racing..."
+          ></textarea>
+        </label>
+
+        <div class="form-field">
+          <span>Psychological</span>
+          <div class="chip-group">
+            <button
+              v-for="item in psychologicalOptions"
+              :key="item"
+              type="button"
+              class="chip"
+              :class="{ selected: form.psychological.includes(item) }"
+              @click="toggleSelection(form.psychological, item)"
+            >
+              {{ item }}
+            </button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <span>Physiological</span>
+          <div class="chip-group">
+            <button
+              v-for="item in physiologicalOptions"
+              :key="item"
+              type="button"
+              class="chip"
+              :class="{ selected: form.physiological.includes(item) }"
+              @click="toggleSelection(form.physiological, item)"
+            >
+              {{ item }}
+            </button>
+          </div>
+        </div>
+
+        <label class="form-field">
+          <span>Thoughts</span>
+          <textarea
+            v-model.trim="form.thoughts"
+            rows="3"
+            placeholder="e.g., “They don’t respect me.”"
+            required
+          ></textarea>
+        </label>
+
+        <label class="form-field">
+          <span>Behaviors</span>
+          <textarea v-model.trim="form.behaviors" rows="3" placeholder="e.g., I yelled back." required></textarea>
+        </label>
+
+        <label class="form-field">
+          <span>Consequences</span>
+          <textarea
+            v-model.trim="form.consequences"
+            rows="3"
+            placeholder="e.g., We both felt hurt and distant."
+            required
+          ></textarea>
+        </label>
+
+        <label class="form-field">
+          <span>Date</span>
           <input v-model="form.createdAt" type="date" required />
         </label>
-        <label class="form-field">
-          <span>事件</span>
-          <input v-model.trim="form.event" type="text" required placeholder="发生了什么？" />
-        </label>
-        <label class="form-field">
-          <span>感受</span>
-          <input v-model.trim="form.feeling" type="text" required placeholder="你感受到的主要情绪" />
-        </label>
-        <label class="form-field wide">
-          <span>想法</span>
-          <textarea v-model.trim="form.thought" rows="3" required placeholder="当时的念头或判断"></textarea>
-        </label>
-        <label class="form-field wide">
-          <span>行为</span>
-          <textarea v-model.trim="form.behavior" rows="3" required placeholder="你采取了什么行动"></textarea>
-        </label>
-        <label class="form-field wide">
-          <span>后果</span>
-          <textarea v-model.trim="form.result" rows="3" required placeholder="产生了哪些影响或结果"></textarea>
-        </label>
-      </div>
 
-      <p v-if="feedback" class="form-feedback">{{ feedback }}</p>
+        <p v-if="feedback" class="form-feedback">{{ feedback }}</p>
 
-      <div class="form-actions">
-        <button type="submit" class="button primary">{{ isEdit ? '保存修改' : '保存日记' }}</button>
-        <button type="button" class="button" @click="goBack">取消</button>
-      </div>
-    </form>
-  </section>
+        <button type="submit" class="primary-button submit-button">{{ isEdit ? 'Save Changes' : 'Save Log' }}</button>
+      </form>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter, RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { useDiaryStore } from '../stores/diaryStore.js';
+import { moodOptions } from '../utils/moods.js';
 
 const props = defineProps({
   mode: {
@@ -73,19 +139,39 @@ const isEdit = computed(() => props.mode === 'edit');
 const feedback = ref('');
 const missingDiary = ref(false);
 
+const psychologicalOptions = [
+  'Anxious',
+  'Stressed',
+  'Depressed',
+  'Lonely',
+  'Irritable',
+];
+
+const physiologicalOptions = [
+  'Headache',
+  'Fatigue',
+  'Nausea',
+  'Dizziness',
+  'Heart Palpitations',
+];
+
 const form = reactive({
+  mood: 'neutral',
+  fact: '',
+  emotions: '',
+  psychological: [],
+  physiological: [],
+  thoughts: '',
+  behaviors: '',
+  consequences: '',
   createdAt: '',
-  event: '',
-  feeling: '',
-  thought: '',
-  behavior: '',
-  result: '',
 });
 
 function formatDateForInput(value) {
   if (!value) {
     return '';
   }
+
   try {
     const date = new Date(value);
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -97,19 +183,22 @@ function formatDateForInput(value) {
 }
 
 function resetToToday() {
-  const today = new Date();
-  const month = `${today.getMonth() + 1}`.padStart(2, '0');
-  const day = `${today.getDate()}`.padStart(2, '0');
-  form.createdAt = `${today.getFullYear()}-${month}-${day}`;
+  const now = new Date();
+  const month = `${now.getMonth() + 1}`.padStart(2, '0');
+  const day = `${now.getDate()}`.padStart(2, '0');
+  form.createdAt = `${now.getFullYear()}-${month}-${day}`;
 }
 
 function populateForm(entry) {
+  form.mood = entry.mood || 'neutral';
+  form.fact = entry.fact || '';
+  form.emotions = entry.emotions || '';
+  form.psychological = Array.isArray(entry.psychological) ? [...entry.psychological] : [];
+  form.physiological = Array.isArray(entry.physiological) ? [...entry.physiological] : [];
+  form.thoughts = entry.thoughts || '';
+  form.behaviors = entry.behaviors || '';
+  form.consequences = entry.consequences || '';
   form.createdAt = formatDateForInput(entry.createdAt);
-  form.event = entry.event || '';
-  form.feeling = entry.feeling || '';
-  form.thought = entry.thought || '';
-  form.behavior = entry.behavior || '';
-  form.result = entry.result || '';
 }
 
 onMounted(() => {
@@ -125,6 +214,15 @@ onMounted(() => {
   }
 });
 
+function toggleSelection(list, value) {
+  const index = list.indexOf(value);
+  if (index === -1) {
+    list.push(value);
+  } else {
+    list.splice(index, 1);
+  }
+}
+
 function goBack() {
   if (isEdit.value) {
     router.push({ name: 'diaryDetail', params: { id: props.id } });
@@ -136,25 +234,29 @@ function goBack() {
 function handleSubmit() {
   feedback.value = '';
 
-  if (!form.createdAt || !form.event || !form.feeling || !form.thought || !form.behavior || !form.result) {
-    feedback.value = '请完整填写所有必填项。';
+  if (!form.fact || !form.thoughts || !form.behaviors || !form.consequences || !form.createdAt) {
+    feedback.value = 'Please complete the required fields.';
     return;
   }
 
-  const createdAtIso = new Date(form.createdAt).toISOString();
+  const createdAtIso = new Date(`${form.createdAt}T00:00:00`).toISOString();
+
   const payload = {
+    mood: form.mood,
+    fact: form.fact,
+    emotions: form.emotions,
+    psychological: [...form.psychological],
+    physiological: [...form.physiological],
+    thoughts: form.thoughts,
+    behaviors: form.behaviors,
+    consequences: form.consequences,
     createdAt: createdAtIso,
-    event: form.event,
-    feeling: form.feeling,
-    thought: form.thought,
-    behavior: form.behavior,
-    result: form.result,
   };
 
   if (isEdit.value) {
     const updated = updateDiary(props.id, payload);
     if (!updated) {
-      feedback.value = '未能保存修改，请稍后重试。';
+      feedback.value = 'We could not save your changes. Please try again.';
       return;
     }
     router.push({ name: 'diaryDetail', params: { id: props.id } });
