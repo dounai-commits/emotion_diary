@@ -2,6 +2,41 @@ import { computed, ref } from 'vue';
 
 const STORAGE_KEY = 'emotion-diary-entries';
 
+function generateId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeDiary(item = {}) {
+  const normalized = {
+    id: item.id || generateId(),
+    createdAt: item.createdAt || new Date().toISOString(),
+    mood: item.mood || 'neutral',
+    fact: item.fact ?? item.event ?? '',
+    emotions: item.emotions ?? item.feeling ?? '',
+    psychological: Array.isArray(item.psychological)
+      ? [...item.psychological]
+      : typeof item.psychological === 'string'
+        ? item.psychological
+            .split(',')
+            .map(part => part.trim())
+            .filter(Boolean)
+        : [],
+    physiological: Array.isArray(item.physiological)
+      ? [...item.physiological]
+      : typeof item.physiological === 'string'
+        ? item.physiological
+            .split(',')
+            .map(part => part.trim())
+            .filter(Boolean)
+        : [],
+    thoughts: item.thoughts ?? item.thought ?? '',
+    behaviors: item.behaviors ?? item.behavior ?? '',
+    consequences: item.consequences ?? item.result ?? '',
+  };
+
+  return normalized;
+}
+
 function loadFromStorage() {
   if (typeof window === 'undefined') {
     return [];
@@ -18,10 +53,7 @@ function loadFromStorage() {
       return [];
     }
 
-    return parsed.map(item => ({
-      ...item,
-      createdAt: item.createdAt || new Date().toISOString(),
-    }));
+    return parsed.map(normalizeDiary);
   } catch (error) {
     console.warn('无法从本地存储读取日记：', error);
     return [];
@@ -38,10 +70,6 @@ function persist() {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(diaries.value));
 }
 
-function generateId() {
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 export function useDiaryStore() {
   const sortedDiaries = computed(() =>
     [...diaries.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
@@ -50,11 +78,7 @@ export function useDiaryStore() {
   const getDiaryById = id => diaries.value.find(item => item.id === id);
 
   const addDiary = diary => {
-    const entry = {
-      ...diary,
-      id: generateId(),
-    };
-
+    const entry = normalizeDiary({ ...diary, id: generateId() });
     diaries.value.push(entry);
     persist();
     return entry;
@@ -66,9 +90,10 @@ export function useDiaryStore() {
       return null;
     }
 
-    diaries.value[index] = { ...diaries.value[index], ...updates };
+    const updated = normalizeDiary({ ...diaries.value[index], ...updates, id });
+    diaries.value[index] = updated;
     persist();
-    return diaries.value[index];
+    return updated;
   };
 
   const deleteDiary = id => {

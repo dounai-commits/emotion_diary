@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import DiaryList from '../views/DiaryList.vue';
 import DiaryForm from '../views/DiaryForm.vue';
 import DiaryDetail from '../views/DiaryDetail.vue';
+import DiaryAnalysis from '../views/DiaryAnalysis.vue';
 
 const routes = [
   {
@@ -26,6 +27,12 @@ const routes = [
     name: 'editDiary',
     component: DiaryForm,
     props: route => ({ mode: 'edit', id: route.params.id }),
+  },
+  {
+    path: '/diary/:id/analysis',
+    name: 'diaryAnalysis',
+    component: DiaryAnalysis,
+    props: true,
   },
   {
     path: '/:pathMatch(.*)*',

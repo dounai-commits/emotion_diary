@@ -1,58 +1,115 @@
 <template>
-  <section class="view-container">
-    <header class="view-header">
-      <div>
-        <h2>日记列表</h2>
-        <p class="view-subtitle">记录你的事件、感受与想法，追踪情绪的变化。</p>
-      </div>
-      <RouterLink to="/new" class="button primary">新建日记</RouterLink>
-    </header>
+  <div class="page home-page">
+    <div class="page-inner">
+      <header class="home-hero">
+        <h1>Mood Log</h1>
+        <p>Track how you feel and notice patterns over time.</p>
+      </header>
 
-    <div v-if="!diaries.length" class="empty-state">
-      <h3>欢迎开启你的情绪疗愈之旅</h3>
-      <p>当情绪在心底泛起波澜，不妨写下来。点击下方按钮，记录第一条日记。</p>
-      <RouterLink to="/new" class="button primary">马上记录</RouterLink>
+      <div v-if="!diaries.length" class="empty-card">
+        <div class="empty-illustration">📝</div>
+        <h2>Your Mood Log is Empty</h2>
+        <p>Start by logging your mood to see your patterns over time.</p>
+        <RouterLink to="/new" class="primary-button">Create First Log</RouterLink>
+      </div>
+
+      <div v-else class="entries">
+        <ul class="entry-list">
+          <li v-for="entry in diaries" :key="entry.id" class="entry-item">
+            <RouterLink :to="`/diary/${entry.id}`" class="entry-card">
+              <div
+                class="entry-avatar"
+                :style="{ backgroundColor: getMoodMeta(entry.mood).background, color: getMoodMeta(entry.mood).color }"
+                aria-hidden="true"
+              >
+                {{ getMoodMeta(entry.mood).icon }}
+              </div>
+              <div class="entry-body">
+                <h3 class="entry-title">{{ entry.fact || 'Untitled Entry' }}</h3>
+                <div class="entry-tags" v-if="extractTags(entry).length">
+                  <span v-for="tag in extractTags(entry)" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+                <time class="entry-date">{{ formatDate(entry.createdAt) }}</time>
+              </div>
+            </RouterLink>
+            <button type="button" class="icon-button" @click="requestDelete(entry.id)">
+              <span aria-hidden="true">🗑️</span>
+              <span class="sr-only">Delete log</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <RouterLink v-if="diaries.length" to="/new" class="fab" aria-label="Create a new mood log">
+        <span class="fab-icon">✏️</span>
+      </RouterLink>
     </div>
 
-    <ul v-else class="diary-list">
-      <li v-for="entry in diaries" :key="entry.id" class="diary-card">
-        <RouterLink :to="`/diary/${entry.id}`" class="card-content">
-          <span class="diary-date">{{ formatDate(entry.createdAt) }}</span>
-          <h3 class="diary-event">{{ entry.event }}</h3>
-          <p class="diary-feeling">
-            <span class="label">主要情绪</span>
-            <span class="value">{{ entry.feeling }}</span>
-          </p>
-        </RouterLink>
-        <button class="button subtle" type="button" @click="confirmDelete(entry.id)">删除</button>
-      </li>
-    </ul>
-  </section>
+    <ConfirmDialog
+      :open="confirmOpen"
+      title="Delete this log?"
+      message="This action cannot be undone."
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      @cancel="closeConfirm"
+      @confirm="handleDelete"
+    />
+  </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { useDiaryStore } from '../stores/diaryStore.js';
+import { getMoodMeta } from '../utils/moods.js';
 
 const { diaries, deleteDiary } = useDiaryStore();
 
-const formatter = new Intl.DateTimeFormat('zh-CN', {
+const confirmOpen = ref(false);
+const pendingDeleteId = ref('');
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
   year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
 });
 
 function formatDate(value) {
   try {
-    return formatter.format(new Date(value));
+    return dateFormatter.format(new Date(value));
   } catch (error) {
     return value;
   }
 }
 
-function confirmDelete(id) {
-  if (window.confirm('确认删除这条日记吗？删除后将无法恢复。')) {
-    deleteDiary(id);
+function extractTags(entry) {
+  if (!entry || !entry.emotions) {
+    return [];
   }
+
+  return entry.emotions
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function requestDelete(id) {
+  pendingDeleteId.value = id;
+  confirmOpen.value = true;
+}
+
+function closeConfirm() {
+  confirmOpen.value = false;
+  pendingDeleteId.value = '';
+}
+
+function handleDelete() {
+  if (pendingDeleteId.value) {
+    deleteDiary(pendingDeleteId.value);
+  }
+  closeConfirm();
 }
 </script>
