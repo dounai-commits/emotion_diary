@@ -290,6 +290,12 @@ button {
   height: 40px;
 }
 
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .missing-card {
   background: #ffffff;
   border-radius: 24px;
@@ -317,37 +323,133 @@ button {
   color: #554c45;
 }
 
-.mood-selector {
+.mood-axis {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 18px;
+  border-radius: 24px;
+  background: rgba(73, 63, 56, 0.08);
+  backdrop-filter: blur(6px);
 }
 
-.mood-pill {
+.mood-axis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mood-axis-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #3a312b;
+}
+
+.mood-axis-current-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 20px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 20px rgba(31, 26, 23, 0.12);
+}
+
+.mood-axis-hint {
+  font-size: 12px;
+  color: #8a827c;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.mood-axis-slider {
+  position: relative;
+  padding: 0 6px;
+}
+
+.mood-range {
+  width: 100%;
+  appearance: none;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #bfc9ff 0%, #ffc7cf 25%, #dfe3e9 50%, #c2f0e0 75%, #ffe6b3 100%);
+  box-shadow: inset 0 1px 4px rgba(31, 26, 23, 0.12);
+}
+
+.mood-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--mood-accent, #ffb84d);
+  border: 3px solid #ffffff;
+  box-shadow: 0 12px 20px rgba(31, 26, 23, 0.18);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.mood-range::-webkit-slider-thumb:active {
+  transform: scale(1.04);
+}
+
+.mood-range::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--mood-accent, #ffb84d);
+  border: 3px solid #ffffff;
+  box-shadow: 0 12px 20px rgba(31, 26, 23, 0.18);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.mood-range::-moz-range-thumb:active {
+  transform: scale(1.04);
+}
+
+.mood-range::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.mood-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.mood-axis-label {
+  flex: 1;
+  border: none;
+  background: transparent;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 72px;
-  padding: 10px 12px;
-  border-radius: 18px;
-  border: none;
-  background: #f2ede6;
   cursor: pointer;
-  font-size: 13px;
-  color: #5c524a;
-  transition: transform 0.2s ease, background 0.2s ease;
+  color: #7b736d;
+  font-size: 12px;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
-.mood-pill .mood-icon {
+.mood-axis-label.active {
+  color: #2d2216;
+  font-weight: 600;
+  transform: translateY(-4px);
+}
+
+.mood-axis-icon {
   font-size: 24px;
 }
 
-.mood-pill.active {
-  background: linear-gradient(135deg, #ffd369, #ffb84d);
-  color: #2d2216;
-  transform: translateY(-2px);
+.mood-axis-text {
+  white-space: nowrap;
 }
 
 .form-field {
@@ -520,24 +622,23 @@ button {
   box-shadow: 0 24px 40px rgba(255, 159, 102, 0.28);
 }
 
-.analysis-card {
-  background: #ffffff;
-  border-radius: 28px;
-  padding: 24px;
+.analysis-layout {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  box-shadow: 0 24px 60px rgba(31, 26, 23, 0.08);
   min-height: 520px;
+  flex: 1;
+  position: relative;
 }
 
 .message-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 420px;
+  flex: 1;
   overflow-y: auto;
   padding-right: 4px;
+  padding-bottom: 12px;
 }
 
 .message {
@@ -580,26 +681,36 @@ button {
   background: rgba(73, 63, 56, 0.08);
 }
 
-.follow-up {
+.analysis-input {
+  position: sticky;
+  bottom: 24px;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
-  padding-top: 8px;
+  padding: 16px 18px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 28px 60px rgba(31, 26, 23, 0.18);
+  backdrop-filter: blur(16px);
+  z-index: 5;
+  margin-top: auto;
 }
 
-.follow-up input {
+.analysis-input input {
   border: none;
-  border-radius: 18px;
-  padding: 14px 16px;
-  background: #f5f1eb;
-  font-size: 14px;
+  background: transparent;
+  font-size: 15px;
+  color: #3a312b;
+  padding: 0;
 }
 
-.follow-up input:focus {
+.analysis-input input::placeholder {
+  color: #9a918a;
+}
+
+.analysis-input input:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 184, 77, 0.25);
-  background: #ffffff;
 }
 
 .send-button {

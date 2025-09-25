@@ -15,7 +15,7 @@
         <RouterLink to="/" class="primary-button ghost">Back to list</RouterLink>
       </section>
 
-      <div v-else class="analysis-card">
+      <div v-else class="analysis-layout">
         <div ref="messageList" class="message-list">
           <div
             v-for="message in messages"
@@ -28,7 +28,7 @@
           </div>
         </div>
 
-        <form class="follow-up" @submit.prevent="submitQuestion">
+        <form class="analysis-input" @submit.prevent="submitQuestion">
           <label class="sr-only" for="follow-up-input">Ask a follow-up</label>
           <input
             id="follow-up-input"

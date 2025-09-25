@@ -17,18 +17,38 @@
 
       <form v-else class="form-card" @submit.prevent="handleSubmit">
         <div class="section-heading">How are you feeling?</div>
-        <div class="mood-selector">
-          <button
-            v-for="option in moodOptions"
-            :key="option.value"
-            type="button"
-            class="mood-pill"
-            :class="{ active: form.mood === option.value }"
-            @click="form.mood = option.value"
-          >
-            <span class="mood-icon">{{ option.icon }}</span>
-            <span>{{ option.label }}</span>
-          </button>
+        <div class="mood-axis" :style="{ '--mood-accent': activeMood.color }">
+          <div class="mood-axis-header">
+            <span class="mood-axis-current">
+              <span class="mood-axis-current-icon">{{ activeMood.icon }}</span>
+              <span>{{ activeMood.label }}</span>
+            </span>
+            <span class="mood-axis-hint">Slide from Awful to Great</span>
+          </div>
+          <div class="mood-axis-slider">
+            <input
+              class="mood-range"
+              type="range"
+              :min="0"
+              :max="moodOptions.length - 1"
+              step="1"
+              v-model.number="moodIndex"
+              :aria-valuetext="currentMoodLabel"
+            />
+          </div>
+          <div class="mood-axis-labels">
+            <button
+              v-for="(option, index) in moodOptions"
+              :key="option.value"
+              type="button"
+              class="mood-axis-label"
+              :class="{ active: form.mood === option.value }"
+              @click="moodIndex = index"
+            >
+              <span class="mood-axis-icon">{{ option.icon }}</span>
+              <span class="mood-axis-text">{{ option.label }}</span>
+            </button>
+          </div>
         </div>
 
         <label class="form-field">
@@ -155,6 +175,8 @@ const physiologicalOptions = [
   'Heart Palpitations',
 ];
 
+const defaultMoodIndex = Math.floor(moodOptions.length / 2);
+
 const form = reactive({
   mood: 'neutral',
   fact: '',
@@ -165,6 +187,26 @@ const form = reactive({
   behaviors: '',
   consequences: '',
   createdAt: '',
+});
+
+const activeMood = computed(
+  () => moodOptions.find(option => option.value === form.mood) || moodOptions[defaultMoodIndex],
+);
+
+const currentMoodLabel = computed(() => activeMood.value.label);
+
+const moodIndex = computed({
+  get() {
+    const index = moodOptions.findIndex(option => option.value === form.mood);
+    return index === -1 ? defaultMoodIndex : index;
+  },
+  set(value) {
+    const normalized = Math.min(moodOptions.length - 1, Math.max(0, Number(value)));
+    const option = moodOptions[normalized];
+    if (option) {
+      form.mood = option.value;
+    }
+  },
 });
 
 function formatDateForInput(value) {
@@ -199,6 +241,13 @@ function populateForm(entry) {
   form.behaviors = entry.behaviors || '';
   form.consequences = entry.consequences || '';
   form.createdAt = formatDateForInput(entry.createdAt);
+
+  if (!form.emotions) {
+    const combined = [...form.psychological, ...form.physiological];
+    if (combined.length) {
+      form.emotions = combined.join(', ');
+    }
+  }
 }
 
 onMounted(() => {
@@ -216,11 +265,34 @@ onMounted(() => {
 
 function toggleSelection(list, value) {
   const index = list.indexOf(value);
-  if (index === -1) {
+  const added = index === -1;
+
+  if (added) {
     list.push(value);
   } else {
     list.splice(index, 1);
   }
+
+  syncEmotionField(value, added);
+}
+
+function syncEmotionField(value, added) {
+  const tokens = form.emotions
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean);
+
+  const existingIndex = tokens.findIndex(token => token === value);
+
+  if (added) {
+    if (existingIndex === -1) {
+      tokens.push(value);
+    }
+  } else if (existingIndex !== -1) {
+    tokens.splice(existingIndex, 1);
+  }
+
+  form.emotions = tokens.join(', ');
 }
 
 function goBack() {
