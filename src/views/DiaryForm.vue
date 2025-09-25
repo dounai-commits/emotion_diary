@@ -4,26 +4,26 @@
       <header class="page-header">
         <button type="button" class="icon-button" @click="goBack">
           <span aria-hidden="true">←</span>
-          <span class="sr-only">Back</span>
+          <span class="sr-only">返回上一页</span>
         </button>
-        <h1>{{ isEdit ? 'Edit Log' : 'New Log' }}</h1>
+        <h1>{{ isEdit ? '编辑日志' : '新建日志' }}</h1>
         <div class="header-spacer" aria-hidden="true"></div>
       </header>
 
       <section v-if="missingDiary" class="missing-card">
-        <p>We couldn’t find this log. It may have been removed.</p>
-        <RouterLink to="/" class="primary-button ghost">Back to list</RouterLink>
+        <p>我们没找到这篇日志，可能已经被删除啦。</p>
+        <RouterLink to="/" class="primary-button ghost">回到列表</RouterLink>
       </section>
 
       <form v-else class="form-card" @submit.prevent="handleSubmit">
-        <div class="section-heading">How are you feeling?</div>
+        <div class="section-heading">现在心情几分？</div>
         <div class="mood-axis" :style="{ '--mood-accent': activeMood.color }">
           <div class="mood-axis-header">
             <span class="mood-axis-current">
               <span class="mood-axis-current-icon">{{ activeMood.icon }}</span>
               <span>{{ activeMood.label }}</span>
             </span>
-            <span class="mood-axis-hint">Slide from Awful to Great</span>
+            <span class="mood-axis-hint">从“糟糕”滑到“好棒棒”试试看</span>
           </div>
           <div class="mood-axis-slider">
             <input
@@ -52,26 +52,26 @@
         </div>
 
         <label class="form-field">
-          <span>Fact</span>
+          <span>发生了什么</span>
           <textarea
             v-model.trim="form.fact"
             rows="3"
-            placeholder="e.g., I had an argument with my partner."
+            placeholder="例如：我和伴侣小吵了一架。"
             required
           ></textarea>
         </label>
 
         <label class="form-field">
-          <span>Emotions</span>
+          <span>感受 / 情绪</span>
           <textarea
             v-model.trim="form.emotions"
             rows="2"
-            placeholder="e.g., Sad, Anxious, Heart racing..."
+            placeholder="例如：难过、焦虑、心跳加速…"
           ></textarea>
         </label>
 
         <div class="form-field">
-          <span>Psychological</span>
+          <span>心理线索</span>
           <div class="chip-group">
             <button
               v-for="item in psychologicalOptions"
@@ -87,7 +87,7 @@
         </div>
 
         <div class="form-field">
-          <span>Physiological</span>
+          <span>身体线索</span>
           <div class="chip-group">
             <button
               v-for="item in physiologicalOptions"
@@ -103,38 +103,38 @@
         </div>
 
         <label class="form-field">
-          <span>Thoughts</span>
+          <span>当时脑子里的想法</span>
           <textarea
             v-model.trim="form.thoughts"
             rows="3"
-            placeholder="e.g., “They don’t respect me.”"
+            placeholder="例如：“他们不在乎我。”"
             required
           ></textarea>
         </label>
 
         <label class="form-field">
-          <span>Behaviors</span>
-          <textarea v-model.trim="form.behaviors" rows="3" placeholder="e.g., I yelled back." required></textarea>
+          <span>你的行为</span>
+          <textarea v-model.trim="form.behaviors" rows="3" placeholder="例如：我也大声回喊。" required></textarea>
         </label>
 
         <label class="form-field">
-          <span>Consequences</span>
+          <span>之后发生了什么</span>
           <textarea
             v-model.trim="form.consequences"
             rows="3"
-            placeholder="e.g., We both felt hurt and distant."
+            placeholder="例如：我们都觉得受伤又变得疏远。"
             required
           ></textarea>
         </label>
 
         <label class="form-field">
-          <span>Date</span>
+          <span>日期</span>
           <input v-model="form.createdAt" type="date" required />
         </label>
 
         <p v-if="feedback" class="form-feedback">{{ feedback }}</p>
 
-        <button type="submit" class="primary-button submit-button">{{ isEdit ? 'Save Changes' : 'Save Log' }}</button>
+        <button type="submit" class="primary-button submit-button">{{ isEdit ? '保存修改' : '保存日志' }}</button>
       </form>
     </div>
   </div>
@@ -165,19 +165,19 @@ const feedback = ref('');
 const missingDiary = ref(false);
 
 const psychologicalOptions = [
-  'Anxious',
-  'Stressed',
-  'Depressed',
-  'Lonely',
-  'Irritable',
+  '焦虑不安',
+  '压力山大',
+  '情绪低落',
+  '有点孤单',
+  '有点烦躁',
 ];
 
 const physiologicalOptions = [
-  'Headache',
-  'Fatigue',
-  'Nausea',
-  'Dizziness',
-  'Heart Palpitations',
+  '头痛',
+  '疲惫',
+  '恶心反胃',
+  '头晕',
+  '心悸',
 ];
 
 const defaultMoodIndex = Math.floor(moodOptions.length / 2);
@@ -312,7 +312,7 @@ function handleSubmit() {
   feedback.value = '';
 
   if (!form.fact || !form.thoughts || !form.behaviors || !form.consequences || !form.createdAt) {
-    feedback.value = 'Please complete the required fields.';
+    feedback.value = '必填项别漏掉呀～';
     return;
   }
 
@@ -333,7 +333,7 @@ function handleSubmit() {
   if (isEdit.value) {
     const updated = updateDiary(props.id, payload);
     if (!updated) {
-      feedback.value = 'We could not save your changes. Please try again.';
+      feedback.value = '保存失败，小应用可能打了个盹，请稍后再试试～';
       return;
     }
     router.push({ name: 'diaryDetail', params: { id: props.id } });

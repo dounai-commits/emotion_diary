@@ -4,24 +4,21 @@
       <header class="page-header">
         <button type="button" class="icon-button" @click="goBack">
           <span aria-hidden="true">←</span>
-          <span class="sr-only">Back</span>
+          <span class="sr-only">返回上一页</span>
         </button>
-        <h1>Settings</h1>
+        <h1>设置</h1>
         <div class="header-spacer" aria-hidden="true"></div>
       </header>
 
       <section class="form-card settings-card">
         <div class="settings-intro">
-          <h2>OpenAI API Key</h2>
-          <p>
-            Provide your personal OpenAI API key to enable real AI-powered analysis. Your key is only stored locally in this
-            browser.
-          </p>
+          <h2>OpenAI API 密钥</h2>
+          <p>填上你的专属 OpenAI API 密钥，就能召唤真正的 AI 小助理啦。密钥只会乖乖保存在本地浏览器中。</p>
         </div>
 
         <form class="settings-form" @submit.prevent="saveKey">
           <label class="form-field">
-            <span>API Key</span>
+            <span>密钥</span>
             <input
               v-model.trim="localKey"
               type="password"
@@ -33,13 +30,14 @@
           </label>
 
           <p class="settings-hint">
-            You can create or manage keys from your
-            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI dashboard</a>.
+            可以前往
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI 控制台</a>
+            生成或管理你的密钥。
           </p>
 
           <div class="settings-actions">
-            <button type="submit" class="primary-button">Save Key</button>
-            <button type="button" class="primary-button ghost" @click="clearKey">Remove Key</button>
+            <button type="submit" class="primary-button">保存密钥</button>
+            <button type="button" class="primary-button ghost" @click="clearKey">清除密钥</button>
           </div>
         </form>
 
@@ -74,17 +72,17 @@ function goBack() {
 
 function saveKey() {
   if (!localKey.value) {
-    feedback.value = 'Please paste a valid API key to continue.';
+    feedback.value = '请先粘贴有效的密钥呀～';
     return;
   }
 
   setApiKey(localKey.value);
-  feedback.value = 'API key saved. You can now use AI analysis.';
+  feedback.value = '密钥保存成功，AI 小助理已上线！';
 }
 
 function clearKey() {
   clearApiKey();
   localKey.value = '';
-  feedback.value = 'API key removed.';
+  feedback.value = '密钥已清除～';
 }
 </script>
