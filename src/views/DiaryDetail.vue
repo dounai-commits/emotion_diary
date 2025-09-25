@@ -128,13 +128,17 @@ const longDateFormatter = new Intl.DateTimeFormat('en-US', {
 });
 
 const emotionTags = computed(() => {
-  if (!diary.value || !diary.value.emotions) {
+  const entry = diary.value;
+  if (!entry || !entry.emotions) {
     return [];
   }
-  return diary.value.emotions
+
+  const presetTags = new Set([...(entry.psychological || []), ...(entry.physiological || [])]);
+
+  return entry.emotions
     .split(',')
     .map(tag => tag.trim())
-    .filter(Boolean);
+    .filter(tag => tag && !presetTags.has(tag));
 });
 
 function formatFullDate(value) {
@@ -146,11 +150,7 @@ function formatFullDate(value) {
 }
 
 function goBack() {
-  if (window.history.length > 1) {
-    router.back();
-  } else {
-    router.push({ name: 'home' });
-  }
+  router.push({ name: 'home' });
 }
 
 function requestDelete() {
