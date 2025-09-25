@@ -22,7 +22,7 @@ function loadSettings() {
       apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
     };
   } catch (error) {
-    console.warn('Failed to read settings from storage:', error);
+    console.warn('无法从本地存储读取设置：', error);
     return { apiKey: '' };
   }
 }

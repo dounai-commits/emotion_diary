@@ -4,15 +4,15 @@
       <header class="page-header analysis-header">
         <button type="button" class="icon-button" @click="goBack">
           <span aria-hidden="true">←</span>
-          <span class="sr-only">Back</span>
+          <span class="sr-only">返回上一页</span>
         </button>
-        <h1>AI Analysis</h1>
+        <h1>AI 心情解读</h1>
         <div class="header-spacer" aria-hidden="true"></div>
       </header>
 
       <section v-if="!diary" class="missing-card">
-        <p>This log is no longer available.</p>
-        <RouterLink to="/" class="primary-button ghost">Back to list</RouterLink>
+        <p>这篇日志找不到啦。</p>
+        <RouterLink to="/" class="primary-button ghost">回到列表</RouterLink>
       </section>
 
       <div v-else class="analysis-layout">
@@ -20,7 +20,7 @@
 
         <div ref="messageList" class="message-list">
           <p v-if="!messages.length && !isLoading && !analysisError" class="muted-text">
-            Your insights will appear here once the analysis is ready.
+            分析完成后会在这里冒泡～
           </p>
 
           <div
@@ -41,22 +41,22 @@
 
           <div v-if="isLoading" class="message assistant pending">
             <div class="message-icon">✨</div>
-            <div class="message-content">Analyzing your entry…</div>
+            <div class="message-content">AI 正在埋头分析中…</div>
           </div>
         </div>
 
         <form class="analysis-input" @submit.prevent="submitQuestion">
-          <label class="sr-only" for="follow-up-input">Ask a follow-up</label>
+          <label class="sr-only" for="follow-up-input">来点追问</label>
           <input
             id="follow-up-input"
             v-model="question"
             type="text"
-            placeholder="Ask a follow-up question..."
+            placeholder="想继续追问什么？"
             :disabled="isLoading"
           />
           <button type="submit" class="send-button" :disabled="!question.trim() || isLoading">
             <span aria-hidden="true">➤</span>
-            <span class="sr-only">Send</span>
+            <span class="sr-only">发送</span>
           </button>
         </form>
       </div>
@@ -189,7 +189,7 @@ watch(apiKey, () => {
   }
 
   if (!apiKey.value) {
-    analysisError.value = 'Add your OpenAI API key in Settings to enable AI analysis.';
+    analysisError.value = '记得先在设置里填入 OpenAI API Key，AI 才能帮忙哟～';
     return;
   }
 
@@ -201,12 +201,12 @@ watch(apiKey, () => {
 
 function buildInitialPrompt(entry) {
   const mood = getMoodMeta(entry.mood);
-  const feelings = entry.emotions || 'Not specified';
-  const thoughts = entry.thoughts || 'Not specified';
-  const behaviors = entry.behaviors || 'Not specified';
-  const consequences = entry.consequences || 'Not specified';
+  const feelings = entry.emotions || '未填写';
+  const thoughts = entry.thoughts || '未填写';
+  const behaviors = entry.behaviors || '未填写';
+  const consequences = entry.consequences || '未填写';
 
-  return `Diary entry details:\nMood: ${mood.label} (${entry.mood})\nEvent: ${entry.fact || 'Not specified'}\nFeelings: ${feelings}\nPsychological notes: ${(entry.psychological || []).join(', ') || 'Not specified'}\nPhysiological notes: ${(entry.physiological || []).join(', ') || 'Not specified'}\nThoughts: ${thoughts}\nBehaviors: ${behaviors}\nConsequences: ${consequences}\n\nPlease provide a caring reflection that helps the writer process this experience.`;
+  return `情绪日志内容：\n心情：${mood.label}（${entry.mood}）\n事件：${entry.fact || '未填写'}\n感受：${feelings}\n心理线索：${(entry.psychological || []).join('、') || '未填写'}\n身体线索：${(entry.physiological || []).join('、') || '未填写'}\n想法：${thoughts}\n行为：${behaviors}\n结果：${consequences}\n\n请用温暖、口语化的中文，帮写下这篇日志的人消化这段经历，并遵守系统提示中的规则。`;
 }
 
 async function runInitialAnalysis() {
@@ -215,7 +215,7 @@ async function runInitialAnalysis() {
   }
 
   if (!apiKey.value) {
-    analysisError.value = 'Add your OpenAI API key in Settings to enable AI analysis.';
+    analysisError.value = '记得先在设置里填入 OpenAI API Key，AI 才能帮忙哟～';
     return;
   }
 
@@ -264,9 +264,9 @@ function scrollToMessage(targetId, position = 'end') {
 
 function formatError(error) {
   if (error instanceof Error) {
-    return `AI analysis failed: ${error.message}`;
+    return `AI 分析失败：${error.message}`;
   }
-  return 'AI analysis failed. Please try again later.';
+  return 'AI 分析暂时失败，请稍后再试试～';
 }
 
 async function requestOpenAI(payload) {
@@ -291,13 +291,13 @@ async function requestOpenAI(payload) {
   }
 
   if (!response.ok) {
-    const message = data?.error?.message || response.statusText || 'Unable to reach OpenAI.';
+    const message = data?.error?.message || response.statusText || '暂时联系不上 OpenAI 服务。';
     throw new Error(message);
   }
 
   const content = data?.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error('The AI response was empty.');
+    throw new Error('AI 什么也没说，可能害羞了。');
   }
 
   return content.trim();
@@ -335,7 +335,7 @@ async function submitQuestion() {
   scrollToMessage(userMessage.id, 'start');
 
   if (!apiKey.value) {
-    analysisError.value = 'Add your OpenAI API key in Settings to enable AI analysis.';
+    analysisError.value = '记得先在设置里填入 OpenAI API Key，AI 才能帮忙哟～';
     return;
   }
 

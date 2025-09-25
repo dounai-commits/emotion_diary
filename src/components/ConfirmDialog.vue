@@ -27,7 +27,7 @@ const props = defineProps({
   },
   title: {
     type: String,
-    default: 'Are you sure?',
+    default: '确定要这么做吗？',
   },
   message: {
     type: String,
@@ -35,11 +35,11 @@ const props = defineProps({
   },
   confirmText: {
     type: String,
-    default: 'Confirm',
+    default: '狠心执行',
   },
   cancelText: {
     type: String,
-    default: 'Cancel',
+    default: '先等等',
   },
 });
 </script>

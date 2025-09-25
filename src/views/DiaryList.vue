@@ -3,19 +3,19 @@
     <div class="page-inner">
       <header class="home-hero">
         <div class="home-hero-top">
-          <h1>Mood Log</h1>
-          <RouterLink to="/settings" class="icon-button" aria-label="Open settings">
+          <h1>心情记事本</h1>
+          <RouterLink to="/settings" class="icon-button" aria-label="打开设置面板">
             <span aria-hidden="true">⚙️</span>
           </RouterLink>
         </div>
-        <p>Track how you feel and notice patterns over time.</p>
+        <p>记录心情起伏，久了就能挖出自己的小秘密～</p>
       </header>
 
       <div v-if="!diaries.length" class="empty-card">
         <div class="empty-illustration">📝</div>
-        <h2>Your Mood Log is Empty</h2>
-        <p>Start by logging your mood to see your patterns over time.</p>
-        <RouterLink to="/new" class="primary-button">Create First Log</RouterLink>
+        <h2>心情记事本还空着呢</h2>
+        <p>不如现在就写一笔，看看今天的你是什么颜色。</p>
+        <RouterLink to="/new" class="primary-button">马上写第一篇</RouterLink>
       </div>
 
       <div v-else class="entries">
@@ -30,7 +30,7 @@
                 {{ getMoodMeta(entry.mood).icon }}
               </div>
               <div class="entry-body">
-                <h3 class="entry-title">{{ entry.fact || 'Untitled Entry' }}</h3>
+                <h3 class="entry-title">{{ entry.fact || '未命名日记' }}</h3>
                 <div class="entry-tags" v-if="extractTags(entry).length">
                   <span v-for="tag in extractTags(entry)" :key="tag" class="tag">{{ tag }}</span>
                 </div>
@@ -39,23 +39,23 @@
             </RouterLink>
             <button type="button" class="icon-button" @click="requestDelete(entry.id)">
               <span aria-hidden="true">🗑️</span>
-              <span class="sr-only">Delete log</span>
+              <span class="sr-only">删除这篇日志</span>
             </button>
           </li>
         </ul>
       </div>
 
-      <RouterLink v-if="diaries.length" to="/new" class="fab" aria-label="Create a new mood log">
+      <RouterLink v-if="diaries.length" to="/new" class="fab" aria-label="新建心情日志">
         <span class="fab-icon">✏️</span>
       </RouterLink>
     </div>
 
     <ConfirmDialog
       :open="confirmOpen"
-      title="Delete this log?"
-      message="This action cannot be undone."
-      confirm-text="Delete"
-      cancel-text="Cancel"
+      title="要把这条日志删掉吗？"
+      message="删除后就找不回啦～"
+      confirm-text="删除"
+      cancel-text="再想想"
       @cancel="closeConfirm"
       @confirm="handleDelete"
     />
@@ -74,9 +74,9 @@ const { diaries, deleteDiary } = useDiaryStore();
 const confirmOpen = ref(false);
 const pendingDeleteId = ref('');
 
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
+const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'short',
-  month: 'short',
+  month: 'long',
   day: 'numeric',
   year: 'numeric',
 });
