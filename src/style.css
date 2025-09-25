@@ -214,6 +214,12 @@ button {
   font-size: 17px;
   font-weight: 600;
   color: #2b2521;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .entry-tags {
@@ -762,6 +768,35 @@ button {
   font-size: 14px;
   line-height: 1.6;
   background: rgba(73, 63, 56, 0.08);
+}
+
+.message-content--plain {
+  white-space: pre-wrap;
+}
+
+.message-content :where(p, ul, ol) {
+  margin: 0;
+}
+
+.message-content :where(p, ul, ol) + :where(p, ul, ol) {
+  margin-top: 8px;
+}
+
+.message-content ul,
+.message-content ol {
+  padding-left: 20px;
+}
+
+.message-content li + li {
+  margin-top: 4px;
+}
+
+.message-content strong {
+  font-weight: 600;
+}
+
+.message-content em {
+  font-style: italic;
 }
 
 .analysis-input {
