@@ -10,36 +10,68 @@
       <p class="insights-intro">看看最近的心情节奏，找到属于自己的小趋势。</p>
 
       <section class="insights-card calendar-card" aria-labelledby="calendar-title">
-        <div class="insights-card-header">
-          <div>
-            <h2 id="calendar-title">心情日历</h2>
-          </div>
-          <div class="view-toggle" role="tablist" aria-label="时间粒度切换">
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="viewMode === 'weekly'"
-              :class="['toggle-button', { active: viewMode === 'weekly' }]"
-              @click="setViewMode('weekly')"
-            >
-              每周
-            </button>
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="viewMode === 'monthly'"
-              :class="['toggle-button', { active: viewMode === 'monthly' }]"
-              @click="setViewMode('monthly')"
-            >
-              每月
-            </button>
-          </div>
+        <div class="calendar-title-row">
+          <h2 id="calendar-title">心情日历</h2>
+        </div>
+        <div class="calendar-toggle-row" role="tablist" aria-label="时间粒度切换">
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="viewMode === 'daily'"
+            :class="['toggle-button', { active: viewMode === 'daily' }]"
+            @click="setViewMode('daily')"
+          >
+            每日
+          </button>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="viewMode === 'weekly'"
+            :class="['toggle-button', { active: viewMode === 'weekly' }]"
+            @click="setViewMode('weekly')"
+          >
+            每周
+          </button>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="viewMode === 'monthly'"
+            :class="['toggle-button', { active: viewMode === 'monthly' }]"
+            @click="setViewMode('monthly')"
+          >
+            每月
+          </button>
         </div>
 
         <div class="period-toolbar">
           <button type="button" class="toolbar-button" @click="goPrev" aria-label="上一周期">←</button>
           <div class="period-label">{{ periodLabel }}</div>
           <button type="button" class="toolbar-button" @click="goNext" aria-label="下一周期">→</button>
+        </div>
+
+        <div v-if="viewMode === 'daily'" class="daily-view">
+          <div class="daily-axis" role="list" aria-label="当日心情时间线">
+            <div class="daily-track">
+              <div
+                v-for="item in dailyTimeline"
+                :key="item.id"
+                class="daily-entry"
+                :style="item.style"
+                role="listitem"
+              >
+                <span class="sr-only">{{ item.accessibleLabel }}</span>
+                <span class="daily-emoji" aria-hidden="true">{{ item.icon }}</span>
+                <span class="daily-time">{{ item.timeLabel }}</span>
+              </div>
+            </div>
+            <div class="daily-ticks" aria-hidden="true">
+              <span v-for="tick in dailyTicks" :key="tick.value" class="daily-tick">
+                <span class="daily-tick-mark"></span>
+                <span class="daily-tick-label">{{ tick.label }}</span>
+              </span>
+            </div>
+          </div>
+          <p v-if="!dailyTimeline.length" class="daily-empty">今天还没有心情记录哦～</p>
         </div>
 
         <div v-if="viewMode === 'weekly'" class="weekly-view">
@@ -70,7 +102,7 @@
           </div>
         </div>
 
-        <div v-else class="monthly-view">
+        <div v-else-if="viewMode === 'monthly'" class="monthly-view">
           <div class="weekday-row">
             <span v-for="name in weekdays" :key="`month-${name}`" class="weekday-name">周{{ name }}</span>
           </div>
@@ -174,10 +206,12 @@ const moodScores = moodOptions.reduce((acc, option, index) => {
   return acc;
 }, {});
 
-const viewMode = ref('weekly');
-const referenceDate = ref(new Date());
-
 const today = new Date();
+const viewMode = ref('daily');
+const referenceDate = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+
+const dayStart = date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+const dayEnd = date => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
 const diaryList = computed(() => diaries.value || []);
 const totalDiaries = computed(() => diaryList.value.length);
@@ -297,7 +331,9 @@ function setViewMode(mode) {
 
 function goPrev() {
   const current = new Date(referenceDate.value);
-  if (viewMode.value === 'weekly') {
+  if (viewMode.value === 'daily') {
+    current.setDate(current.getDate() - 1);
+  } else if (viewMode.value === 'weekly') {
     current.setDate(current.getDate() - 7);
   } else {
     current.setMonth(current.getMonth() - 1);
@@ -307,7 +343,9 @@ function goPrev() {
 
 function goNext() {
   const current = new Date(referenceDate.value);
-  if (viewMode.value === 'weekly') {
+  if (viewMode.value === 'daily') {
+    current.setDate(current.getDate() + 1);
+  } else if (viewMode.value === 'weekly') {
     current.setDate(current.getDate() + 7);
   } else {
     current.setMonth(current.getMonth() + 1);
@@ -317,6 +355,11 @@ function goNext() {
 
 const currentRange = computed(() => {
   const ref = referenceDate.value;
+  if (viewMode.value === 'daily') {
+    const start = dayStart(ref);
+    const end = dayEnd(ref);
+    return { start, end };
+  }
   if (viewMode.value === 'weekly') {
     const start = startOfWeek(ref);
     const end = endOfWeek(ref);
@@ -394,10 +437,75 @@ function formatRange(start, end) {
 
 const periodLabel = computed(() => {
   const { start, end } = currentRange.value;
+  if (viewMode.value === 'daily') {
+    const weekday = weekdays[start.getDay()];
+    return `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日 · 周${weekday}`;
+  }
   if (viewMode.value === 'weekly') {
     return formatRange(start, end);
   }
   return `${start.getFullYear()}年${start.getMonth() + 1}月`;
+});
+
+const dailyEntries = computed(() => {
+  const key = toDateKey(referenceDate.value);
+  const list = diariesByDate.value.get(key) || [];
+  return list
+    .map(entry => {
+      const parsed = new Date(entry.createdAt);
+      return { entry, parsed };
+    })
+    .filter(item => !Number.isNaN(item.parsed.getTime()))
+    .sort((a, b) => a.parsed - b.parsed);
+});
+
+const dailyTicks = computed(() => {
+  const marks = [0, 6, 12, 18, 24];
+  return marks.map(value => ({
+    value,
+    label: value === 24 ? '24:00' : `${String(value).padStart(2, '0')}:00`,
+    position: `${(value / 24) * 100}%`,
+  }));
+});
+
+const dailyTimeline = computed(() => {
+  const slots = new Map();
+  dailyEntries.value.forEach(({ entry, parsed }) => {
+    const minutes = parsed.getHours() * 60 + parsed.getMinutes();
+    const key = minutes;
+    if (!slots.has(key)) {
+      slots.set(key, []);
+    }
+    slots.get(key).push({ entry, parsed });
+  });
+
+  const items = [];
+  slots.forEach((entries, key) => {
+    const sorted = entries.sort((a, b) => a.parsed - b.parsed);
+    const groupSize = sorted.length;
+    sorted.forEach((item, index) => {
+      const { entry, parsed } = item;
+      const minutes = parsed.getHours() * 60 + parsed.getMinutes();
+      const totalHours = minutes / 60;
+      const position = `${(totalHours / 24) * 100}%`;
+      const meta = getMoodMeta(entry.mood || 'neutral');
+      const icon = meta?.icon || '🙂';
+      const timeLabel = `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
+      const offset = (index - (groupSize - 1) / 2) * 22;
+      items.push({
+        id: `${entry.id || entry.createdAt}-${index}`,
+        icon,
+        timeLabel,
+        accessibleLabel: `${timeLabel} · ${meta?.label || '未知心情'}`,
+        style: {
+          left: position,
+          '--stack-offset': `${offset}px`,
+        },
+      });
+    });
+  });
+
+  return items.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
 });
 
 const rangeDiaries = computed(() => {
@@ -525,9 +633,7 @@ const aiSummaryState = computed(() => {
   return { text: aiSummary.value, muted: false };
 });
 
-const AI_SYSTEM_PROMPT = `你是一位温暖、理性的情绪陪伴助理。请用中文输出一个 JSON，对象必须包含两个键：
-"triggers"：一个字符串数组，列出 1-3 个最容易激发用户情绪波动的场景或模式；
-"summary"：一段不超过 400 个中文字符的总结，概述该时间段的情绪状态和记录习惯。请避免提供建议或使用列表符号。`;
+const AI_SYSTEM_PROMPT = `你是一名心理助理。请用温和、中立的语气，结合提供的情绪日志进行中文分析，并严格按照指定格式输出。`;
 
 watch(
   [() => rangeDiaries.value, () => hasApiKey.value, () => periodLabel.value],
@@ -608,12 +714,13 @@ function formatDiaryForPrompt(entry, index) {
 
 function buildAiMessages(entries, label) {
   const details = entries.map((entry, index) => formatDiaryForPrompt(entry, index + 1)).join('\n\n');
-  const intro = `请分析时间范围「${label}」内的 ${entries.length} 篇日志，找出高频触发场景并总结情绪状态。`;
+  const intro = `以下是用户在时间范围「${label}」内的 ${entries.length} 篇情绪日志，包括心情分数、事件、感受、心理/身体线索、想法和行为。`;
+  const instructions = `请你：\n1. 归纳主要情绪类型和强度变化趋势。\n2. 找出高频触发因素与常见思维或行为模式。\n3. 给出简洁总结，并提供2-3条温和可行的日常建议。\n请按以下格式输出：\n【趋势总结】：用2-3句话说明整体情绪走向与特征\n【主要触发因素】：列出1-3个关键因素\n【行为/思维模式】：简要概括用户常见反应\n【建议】：提供2-3条具体可执行的改善方法`;
   return [
     { role: 'system', content: AI_SYSTEM_PROMPT },
     {
       role: 'user',
-      content: `${intro}\n\n${details}\n\n请直接返回严格的 JSON，例如 {"triggers": [""], "summary": ""}。`,
+      content: `${intro}\n\n${details}\n\n${instructions}`,
     },
   ];
 }
@@ -623,32 +730,25 @@ function parseAiInsights(text) {
     throw new Error('AI 没有返回内容');
   }
 
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch (error) {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw new Error('AI 返回内容无法解析');
-    }
-    parsed = JSON.parse(match[0]);
-  }
+  const normalized = normalizeSummary(text);
 
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('AI 返回内容无法解析');
-  }
+  const getSection = label => {
+    const pattern = new RegExp(`【${label}】：([\s\S]*?)(?=\n?【|$)`, 'u');
+    const match = normalized.match(pattern);
+    return match ? match[1].trim() : '';
+  };
 
-  const triggerList = Array.isArray(parsed.triggers) ? parsed.triggers : [];
-  const summaryText = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
-
-  const normalizedTriggers = triggerList
-    .map(item => String(item || '').trim())
+  const triggerText = getSection('主要触发因素');
+  const triggers = triggerText
+    .split(/(?:\n|、|；|;)/u)
+    .map(item => item.trim())
     .filter(Boolean)
+    .slice(0, 3)
     .map(item => (item.length > 16 ? `${item.slice(0, 15)}…` : item));
 
   return {
-    triggers: normalizedTriggers,
-    summary: truncateText(summaryText, 400),
+    triggers,
+    summary: truncateText(normalized, 600),
   };
 }
 
@@ -755,19 +855,28 @@ function goBack() {
   gap: 20px;
 }
 
-.insights-card-header {
+.calendar-title-row {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  justify-content: flex-start;
 }
 
-.view-toggle {
+.calendar-title-row h2 {
+  margin: 0;
+}
+
+.calendar-toggle-row {
   background: rgba(31, 26, 23, 0.06);
   border-radius: 999px;
   padding: 6px;
   display: inline-flex;
   gap: 6px;
+}
+
+.insights-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .toggle-button {
@@ -794,6 +903,103 @@ function goBack() {
   justify-content: space-between;
   gap: 16px;
   padding: 0 4px;
+}
+
+.daily-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.daily-axis {
+  position: relative;
+  padding: 32px 0 24px;
+}
+
+.daily-track {
+  position: relative;
+  height: 4px;
+  background: rgba(31, 26, 23, 0.12);
+  border-radius: 999px;
+}
+
+.daily-entry {
+  position: absolute;
+  top: 50%;
+  transform: translate(calc(-50% + var(--stack-offset, 0px)), -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.daily-entry::before {
+  content: '';
+  position: absolute;
+  top: calc(50% + 18px);
+  left: 50%;
+  width: 1px;
+  height: 16px;
+  background: rgba(31, 26, 23, 0.16);
+  transform: translateX(-50%);
+}
+
+.daily-emoji {
+  font-size: 32px;
+  filter: drop-shadow(0 8px 14px rgba(31, 26, 23, 0.16));
+}
+
+.daily-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f1a17;
+  background: #fff6d6;
+  border-radius: 999px;
+  padding: 4px 10px;
+  box-shadow: 0 12px 24px rgba(31, 26, 23, 0.12);
+  white-space: nowrap;
+}
+
+.daily-ticks {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  color: #6f665e;
+  font-size: 12px;
+}
+
+.daily-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  flex: 1;
+}
+
+.daily-tick:not(:last-child) .daily-tick-label {
+  align-self: flex-start;
+}
+
+.daily-tick:last-child .daily-tick-label {
+  align-self: flex-end;
+}
+
+.daily-tick-mark {
+  width: 1px;
+  height: 12px;
+  background: rgba(31, 26, 23, 0.14);
+}
+
+.daily-tick-label {
+  color: inherit;
+}
+
+.daily-empty {
+  margin: 0;
+  font-size: 14px;
+  color: #6f665e;
 }
 
 .toolbar-button {
