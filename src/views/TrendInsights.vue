@@ -131,7 +131,7 @@
         </div>
       </section>
 
-      <section class="insights-card" aria-labelledby="ai-summary-title">
+      <section class="insights-card ai-summary-card" aria-labelledby="ai-summary-title">
         <div class="insights-card-header">
           <h2 id="ai-summary-title">AI 总结</h2>
         </div>
@@ -143,7 +143,7 @@
         </p>
       </section>
 
-      <section class="insights-card" aria-labelledby="metrics-title">
+      <section class="insights-card metrics-section" aria-labelledby="metrics-title">
         <div class="insights-card-header">
           <div>
             <h2 id="metrics-title">关键指标</h2>
@@ -474,7 +474,7 @@ const dailyTimeline = computed(() => {
         timeLabel,
         accessibleLabel: `${timeLabel} · ${meta?.label || '未知心情'}`,
         style: {
-          left: position,
+          '--entry-position': position,
           '--stack-offset': `${offset}px`,
         },
       });
@@ -821,7 +821,7 @@ function goBack() {
 .calendar-toggle-row {
   background: rgba(31, 26, 23, 0.06);
   border-radius: 999px;
-  padding: 6px;
+  padding: 8px;
   display: inline-flex;
   gap: 6px;
   align-items: center;
@@ -838,13 +838,17 @@ function goBack() {
 .toggle-button {
   border: none;
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 10px 22px;
+  min-width: 96px;
   font-weight: 600;
   font-size: 14px;
   background: transparent;
   color: #6f665e;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toggle-button.active {
@@ -882,6 +886,7 @@ function goBack() {
 .daily-entry {
   position: absolute;
   top: 50%;
+  left: clamp(48px, var(--entry-position, 50%), calc(100% - 48px));
   transform: translate(calc(-50% + var(--stack-offset, 0px)), -50%);
   display: flex;
   flex-direction: column;
@@ -915,6 +920,10 @@ function goBack() {
   padding: 4px 10px;
   box-shadow: 0 12px 24px rgba(31, 26, 23, 0.12);
   white-space: nowrap;
+  max-width: 140px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .daily-empty {
@@ -1097,6 +1106,11 @@ function goBack() {
 
 .ai-summary-text--muted {
   color: #8a8078;
+}
+
+.ai-summary-card,
+.metrics-section {
+  gap: 16px;
 }
 
 .insights-empty {
