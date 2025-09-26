@@ -65,9 +65,6 @@
                 >
                   {{ item.icon }}
                 </span>
-                <span v-if="!day.moodStack.length" class="mood-stack-item mood-stack-item--empty" aria-hidden="true">
-                  ·
-                </span>
               </div>
               <div class="day-number">{{ day.dayNumber }}</div>
             </div>
@@ -101,9 +98,6 @@
                     aria-hidden="true"
                   >
                     {{ item.icon }}
-                  </span>
-                  <span v-if="!day.moodStack.length" class="mood-stack-item mood-stack-item--empty" aria-hidden="true">
-                    ·
                   </span>
                 </div>
               </div>
@@ -884,11 +878,6 @@ function goBack() {
   box-shadow: 0 14px 24px rgba(31, 26, 23, 0.08);
   border: 1px solid rgba(31, 26, 23, 0.06);
   transition: transform 0.2s ease;
-}
-
-.mood-stack-item--empty {
-  background: rgba(31, 26, 23, 0.08);
-  color: #71665d;
 }
 
 .day-number {
