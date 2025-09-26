@@ -64,12 +64,6 @@
                 <span class="daily-time">{{ item.timeLabel }}</span>
               </div>
             </div>
-            <div class="daily-ticks" aria-hidden="true">
-              <span v-for="tick in dailyTicks" :key="tick.value" class="daily-tick">
-                <span class="daily-tick-mark"></span>
-                <span class="daily-tick-label">{{ tick.label }}</span>
-              </span>
-            </div>
           </div>
           <p v-if="!dailyTimeline.length" class="daily-empty">今天还没有心情记录哦～</p>
         </div>
@@ -169,15 +163,6 @@
               :class="{ 'metric-value--muted': topEmotionState.muted }"
             >
               {{ topEmotionState.text }}
-            </p>
-          </article>
-          <article class="metric-card" role="listitem">
-            <h3 class="metric-title">高频触发场景</h3>
-            <p
-              class="metric-value"
-              :class="{ 'metric-value--muted': triggerAnalysisState.muted }"
-            >
-              {{ triggerAnalysisState.text }}
             </p>
           </article>
         </div>
@@ -459,15 +444,6 @@ const dailyEntries = computed(() => {
     .sort((a, b) => a.parsed - b.parsed);
 });
 
-const dailyTicks = computed(() => {
-  const marks = [0, 6, 12, 18, 24];
-  return marks.map(value => ({
-    value,
-    label: value === 24 ? '24:00' : `${String(value).padStart(2, '0')}:00`,
-    position: `${(value / 24) * 100}%`,
-  }));
-});
-
 const dailyTimeline = computed(() => {
   const slots = new Map();
   dailyEntries.value.forEach(({ entry, parsed }) => {
@@ -589,30 +565,10 @@ const topEmotionState = computed(() => {
   return { text: topEmotions.join(' / '), muted: false };
 });
 
-const aiTriggers = ref([]);
 const aiSummary = ref('');
 const aiLoading = ref(false);
 const aiError = ref('');
 let aiRequestId = 0;
-
-const triggerAnalysisState = computed(() => {
-  if (!rangeDiaries.value.length) {
-    return { text: '暂无数据', muted: true };
-  }
-  if (!hasApiKey.value) {
-    return { text: '需要配置 API Key', muted: true };
-  }
-  if (aiLoading.value) {
-    return { text: 'AI 分析中…', muted: true };
-  }
-  if (aiError.value) {
-    return { text: aiError.value, muted: true };
-  }
-  if (!aiTriggers.value.length) {
-    return { text: '暂无结果', muted: true };
-  }
-  return { text: aiTriggers.value.join('、'), muted: false };
-});
 
 const aiSummaryState = computed(() => {
   if (!rangeDiaries.value.length) {
@@ -639,7 +595,6 @@ watch(
   [() => rangeDiaries.value, () => hasApiKey.value, () => periodLabel.value],
   async ([entries, keyAvailable, label]) => {
     aiError.value = '';
-    aiTriggers.value = [];
     aiSummary.value = '';
 
     if (!entries.length || !keyAvailable) {
@@ -655,7 +610,6 @@ watch(
       if (requestId !== aiRequestId) {
         return;
       }
-      aiTriggers.value = insights.triggers;
       aiSummary.value = normalizeSummary(insights.summary);
       aiError.value = '';
     } catch (error) {
@@ -870,6 +824,8 @@ function goBack() {
   padding: 6px;
   display: inline-flex;
   gap: 6px;
+  align-items: center;
+  margin: 0 auto;
 }
 
 .insights-card-header {
@@ -913,7 +869,7 @@ function goBack() {
 
 .daily-axis {
   position: relative;
-  padding: 32px 0 24px;
+  padding: 32px 0 12px;
 }
 
 .daily-track {
@@ -959,41 +915,6 @@ function goBack() {
   padding: 4px 10px;
   box-shadow: 0 12px 24px rgba(31, 26, 23, 0.12);
   white-space: nowrap;
-}
-
-.daily-ticks {
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-between;
-  color: #6f665e;
-  font-size: 12px;
-}
-
-.daily-tick {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  position: relative;
-  flex: 1;
-}
-
-.daily-tick:not(:last-child) .daily-tick-label {
-  align-self: flex-start;
-}
-
-.daily-tick:last-child .daily-tick-label {
-  align-self: flex-end;
-}
-
-.daily-tick-mark {
-  width: 1px;
-  height: 12px;
-  background: rgba(31, 26, 23, 0.14);
-}
-
-.daily-tick-label {
-  color: inherit;
 }
 
 .daily-empty {

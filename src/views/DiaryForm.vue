@@ -127,10 +127,21 @@
           ></textarea>
         </label>
 
-        <label class="form-field">
-          <span>日期</span>
-          <input v-model="form.createdAt" type="date" required />
-        </label>
+        <div class="form-field form-field--datetime">
+          <span>记录时间</span>
+          <div class="datetime-row">
+            <input v-model="form.createdDate" type="date" required aria-label="选择日期" />
+            <div class="time-selectors" role="group" aria-label="选择具体时间">
+              <select v-model="form.createdHour" required aria-label="小时">
+                <option v-for="hour in hourOptions" :key="hour" :value="hour">{{ hour }}</option>
+              </select>
+              <span class="time-separator" aria-hidden="true">:</span>
+              <select v-model="form.createdMinute" required aria-label="分钟">
+                <option v-for="minute in minuteOptions" :key="minute" :value="minute">{{ minute }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
         <p v-if="feedback" class="form-feedback">{{ feedback }}</p>
 
@@ -180,6 +191,9 @@ const physiologicalOptions = [
   '心悸',
 ];
 
+const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'));
+const minuteOptions = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
+
 const defaultMoodIndex = Math.floor(moodOptions.length / 2);
 
 const form = reactive({
@@ -191,7 +205,9 @@ const form = reactive({
   thoughts: '',
   behaviors: '',
   consequences: '',
-  createdAt: '',
+  createdDate: '',
+  createdHour: '00',
+  createdMinute: '00',
 });
 
 const activeMood = computed(
@@ -219,21 +235,25 @@ function formatDateForInput(value) {
     return '';
   }
 
-  try {
-    const date = new Date(value);
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
-  } catch (error) {
-    return value;
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
   }
+
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function formatTimeUnit(number) {
+  return String(number).padStart(2, '0');
 }
 
 function resetToToday() {
   const now = new Date();
-  const month = `${now.getMonth() + 1}`.padStart(2, '0');
-  const day = `${now.getDate()}`.padStart(2, '0');
-  form.createdAt = `${now.getFullYear()}-${month}-${day}`;
+  form.createdDate = formatDateForInput(now);
+  form.createdHour = formatTimeUnit(now.getHours());
+  form.createdMinute = formatTimeUnit(now.getMinutes());
 }
 
 function populateForm(entry) {
@@ -245,7 +265,21 @@ function populateForm(entry) {
   form.thoughts = entry.thoughts || '';
   form.behaviors = entry.behaviors || '';
   form.consequences = entry.consequences || '';
-  form.createdAt = formatDateForInput(entry.createdAt);
+
+  const parsedDate = new Date(entry.createdAt);
+  if (!Number.isNaN(parsedDate.getTime())) {
+    form.createdDate = formatDateForInput(parsedDate);
+    form.createdHour = formatTimeUnit(parsedDate.getHours());
+    form.createdMinute = formatTimeUnit(parsedDate.getMinutes());
+  } else {
+    form.createdDate = formatDateForInput(entry.createdAt);
+    form.createdHour = '00';
+    form.createdMinute = '00';
+  }
+
+  if (!form.createdDate) {
+    resetToToday();
+  }
 
   if (!form.emotions) {
     const combined = [...form.psychological, ...form.physiological];
@@ -311,12 +345,23 @@ function goBack() {
 function handleSubmit() {
   feedback.value = '';
 
-  if (!form.fact || !form.thoughts || !form.behaviors || !form.consequences || !form.createdAt) {
+  if (
+    !form.fact ||
+    !form.thoughts ||
+    !form.behaviors ||
+    !form.consequences ||
+    !form.createdDate ||
+    !form.createdHour ||
+    !form.createdMinute
+  ) {
     feedback.value = '必填项别漏掉呀～';
     return;
   }
 
-  const createdAtIso = new Date(`${form.createdAt}T00:00:00`).toISOString();
+  const datePart = form.createdDate;
+  const hourPart = form.createdHour.padStart(2, '0');
+  const minutePart = form.createdMinute.padStart(2, '0');
+  const createdAtIso = new Date(`${datePart}T${hourPart}:${minutePart}:00`).toISOString();
 
   const payload = {
     mood: form.mood,
