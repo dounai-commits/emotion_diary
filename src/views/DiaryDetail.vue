@@ -122,9 +122,12 @@ const moodMeta = computed(() => getMoodMeta(diary.value?.mood));
 const confirmOpen = ref(false);
 
 const longDateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
   month: 'long',
   day: 'numeric',
-  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
 });
 
 const emotionTags = computed(() => {
