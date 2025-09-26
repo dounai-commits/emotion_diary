@@ -528,7 +528,7 @@ button {
 
 .form-field--datetime .datetime-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
   align-items: center;
 }
@@ -541,6 +541,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .time-selectors select {

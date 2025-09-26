@@ -55,7 +55,7 @@
               <div
                 v-for="item in dailyTimeline"
                 :key="item.id"
-                class="daily-entry"
+                :class="['daily-entry', `daily-entry--${item.lane}`]"
                 :style="item.style"
                 role="listitem"
               >
@@ -131,18 +131,6 @@
         </div>
       </section>
 
-      <section class="insights-card ai-summary-card" aria-labelledby="ai-summary-title">
-        <div class="insights-card-header">
-          <h2 id="ai-summary-title">AI 总结</h2>
-        </div>
-        <p
-          class="ai-summary-text"
-          :class="{ 'ai-summary-text--muted': aiSummaryState.muted }"
-        >
-          {{ aiSummaryState.text }}
-        </p>
-      </section>
-
       <section class="insights-card metrics-section" aria-labelledby="metrics-title">
         <div class="insights-card-header">
           <div>
@@ -166,6 +154,18 @@
             </p>
           </article>
         </div>
+      </section>
+
+      <section class="insights-card ai-summary-card" aria-labelledby="ai-summary-title">
+        <div class="insights-card-header">
+          <h2 id="ai-summary-title">AI 总结</h2>
+        </div>
+        <p
+          class="ai-summary-text"
+          :class="{ 'ai-summary-text--muted': aiSummaryState.muted }"
+        >
+          {{ aiSummaryState.text }}
+        </p>
       </section>
 
       <p v-if="!totalDiaries" class="insights-empty">目前还没有数据，先去写一篇心情日志吧～</p>
@@ -444,19 +444,20 @@ const dailyEntries = computed(() => {
     .sort((a, b) => a.parsed - b.parsed);
 });
 
+const DAILY_OVERLAP_THRESHOLD_MINUTES = 60;
+
 const dailyTimeline = computed(() => {
   const slots = new Map();
   dailyEntries.value.forEach(({ entry, parsed }) => {
     const minutes = parsed.getHours() * 60 + parsed.getMinutes();
-    const key = minutes;
-    if (!slots.has(key)) {
-      slots.set(key, []);
+    if (!slots.has(minutes)) {
+      slots.set(minutes, []);
     }
-    slots.get(key).push({ entry, parsed });
+    slots.get(minutes).push({ entry, parsed });
   });
 
   const items = [];
-  slots.forEach((entries, key) => {
+  slots.forEach(entries => {
     const sorted = entries.sort((a, b) => a.parsed - b.parsed);
     const groupSize = sorted.length;
     sorted.forEach((item, index) => {
@@ -468,11 +469,13 @@ const dailyTimeline = computed(() => {
       const icon = meta?.icon || '🙂';
       const timeLabel = `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
       const offset = (index - (groupSize - 1) / 2) * 22;
+
       items.push({
         id: `${entry.id || entry.createdAt}-${index}`,
         icon,
         timeLabel,
         accessibleLabel: `${timeLabel} · ${meta?.label || '未知心情'}`,
+        minutes,
         style: {
           '--entry-position': position,
           '--stack-offset': `${offset}px`,
@@ -481,7 +484,25 @@ const dailyTimeline = computed(() => {
     });
   });
 
-  return items.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+  const sortedItems = [...items].sort((a, b) => a.minutes - b.minutes);
+  let previousMinute = Number.NEGATIVE_INFINITY;
+  let previousLane = 'bottom';
+
+  return sortedItems.map(item => {
+    const isClose = item.minutes - previousMinute <= DAILY_OVERLAP_THRESHOLD_MINUTES;
+    const lane = isClose ? (previousLane === 'top' ? 'bottom' : 'top') : 'top';
+
+    previousMinute = item.minutes;
+    previousLane = lane;
+
+    return {
+      ...item,
+      lane,
+      style: {
+        ...item.style,
+      },
+    };
+  });
 });
 
 const rangeDiaries = computed(() => {
@@ -873,7 +894,7 @@ function goBack() {
 
 .daily-axis {
   position: relative;
-  padding: 32px 0 12px;
+  padding: 40px 0;
 }
 
 .daily-track {
@@ -884,10 +905,14 @@ function goBack() {
 }
 
 .daily-entry {
+  --lane-offset: -32px;
   position: absolute;
   top: 50%;
   left: clamp(48px, var(--entry-position, 50%), calc(100% - 48px));
-  transform: translate(calc(-50% + var(--stack-offset, 0px)), -50%);
+  transform: translate(
+    calc(-50% + var(--stack-offset, 0px)),
+    calc(-50% + var(--lane-offset, -32px))
+  );
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -898,12 +923,26 @@ function goBack() {
 .daily-entry::before {
   content: '';
   position: absolute;
-  top: calc(50% + 18px);
   left: 50%;
   width: 1px;
-  height: 16px;
   background: rgba(31, 26, 23, 0.16);
   transform: translateX(-50%);
+  top: calc(50% + 18px);
+  height: calc(16px - var(--lane-offset, -32px));
+}
+
+.daily-entry--top {
+  --lane-offset: -32px;
+}
+
+.daily-entry--bottom {
+  --lane-offset: 32px;
+}
+
+.daily-entry--bottom::before {
+  top: auto;
+  bottom: calc(50% + 18px);
+  height: calc(16px + var(--lane-offset, 32px));
 }
 
 .daily-emoji {
