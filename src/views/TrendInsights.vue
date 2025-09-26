@@ -51,17 +51,36 @@
 
         <div v-if="viewMode === 'daily'" class="daily-view">
           <div class="daily-axis" role="list" aria-label="当日心情时间线">
-            <div class="daily-track">
+            <div class="daily-canvas">
+              <div class="daily-spectrum" aria-hidden="true">
+                <div
+                  v-for="level in moodLevels"
+                  :key="level.value"
+                  class="daily-spectrum-band"
+                ></div>
+              </div>
+              <div class="daily-track">
+                <div
+                  v-for="item in dailyTimeline"
+                  :key="item.id"
+                  class="daily-entry"
+                  :style="item.style"
+                  role="listitem"
+                >
+                  <span class="sr-only">{{ item.accessibleLabel }}</span>
+                  <span class="daily-emoji" aria-hidden="true">{{ item.icon }}</span>
+                  <span class="daily-time">{{ item.timeLabel }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="daily-ticks" aria-hidden="true">
               <div
-                v-for="item in dailyTimeline"
-                :key="item.id"
-                :class="['daily-entry', `daily-entry--${item.lane}`]"
-                :style="item.style"
-                role="listitem"
+                v-for="tick in dailyTicks"
+                :key="tick.hour"
+                class="daily-tick"
+                :style="{ '--hour-index': tick.hour }"
               >
-                <span class="sr-only">{{ item.accessibleLabel }}</span>
-                <span class="daily-emoji" aria-hidden="true">{{ item.icon }}</span>
-                <span class="daily-time">{{ item.timeLabel }}</span>
+                {{ tick.label }}
               </div>
             </div>
           </div>
@@ -190,6 +209,24 @@ const moodScores = moodOptions.reduce((acc, option, index) => {
   acc[option.value] = index + 1;
   return acc;
 }, {});
+
+const moodLevels = moodOptions.map((option, index) => ({
+  ...option,
+  level: index + 1,
+}));
+
+const moodLevelMap = moodLevels.reduce((acc, option) => {
+  acc[option.value] = option;
+  return acc;
+}, {});
+
+const defaultMoodLevel = moodLevelMap.neutral || moodLevels[Math.floor(moodLevels.length / 2)];
+
+const dailyTickHours = [8, 12, 16, 20];
+const dailyTicks = dailyTickHours.map(hour => ({
+  hour,
+  label: `${String(hour).padStart(2, '0')}:00`,
+}));
 
 const today = new Date();
 const viewMode = ref('daily');
@@ -444,64 +481,44 @@ const dailyEntries = computed(() => {
     .sort((a, b) => a.parsed - b.parsed);
 });
 
-const DAILY_OVERLAP_THRESHOLD_MINUTES = 60;
-
 const dailyTimeline = computed(() => {
-  const slots = new Map();
+  const buckets = new Map();
+
   dailyEntries.value.forEach(({ entry, parsed }) => {
-    const minutes = parsed.getHours() * 60 + parsed.getMinutes();
-    if (!slots.has(minutes)) {
-      slots.set(minutes, []);
+    const hour = parsed.getHours();
+    const moodValue = moodLevelMap[entry.mood] ? entry.mood : 'neutral';
+    const moodMeta = moodLevelMap[moodValue] || defaultMoodLevel;
+
+    if (!buckets.has(hour)) {
+      buckets.set(hour, new Map());
     }
-    slots.get(minutes).push({ entry, parsed });
+
+    const hourBucket = buckets.get(hour);
+    const existing = hourBucket.get(moodValue);
+
+    if (!existing || parsed > existing.parsed) {
+      hourBucket.set(moodValue, { entry, parsed, moodMeta });
+    }
   });
 
-  const items = [];
-  slots.forEach(entries => {
-    const sorted = entries.sort((a, b) => a.parsed - b.parsed);
-    const groupSize = sorted.length;
-    sorted.forEach((item, index) => {
-      const { entry, parsed } = item;
-      const minutes = parsed.getHours() * 60 + parsed.getMinutes();
-      const totalHours = minutes / 60;
-      const position = `${(totalHours / 24) * 100}%`;
-      const meta = getMoodMeta(entry.mood || 'neutral');
-      const icon = meta?.icon || '🙂';
-      const timeLabel = `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
-      const offset = (index - (groupSize - 1) / 2) * 22;
+  const hours = [...buckets.keys()].sort((a, b) => a - b);
 
-      items.push({
-        id: `${entry.id || entry.createdAt}-${index}`,
-        icon,
-        timeLabel,
-        accessibleLabel: `${timeLabel} · ${meta?.label || '未知心情'}`,
-        minutes,
-        style: {
-          '--entry-position': position,
-          '--stack-offset': `${offset}px`,
-        },
-      });
-    });
-  });
+  return hours.flatMap(hour => {
+    const moodEntries = [...(buckets.get(hour)?.values() || [])].sort(
+      (a, b) => a.moodMeta.level - b.moodMeta.level,
+    );
+    const timeLabel = `${String(hour).padStart(2, '0')}:00`;
 
-  const sortedItems = [...items].sort((a, b) => a.minutes - b.minutes);
-  let previousMinute = Number.NEGATIVE_INFINITY;
-  let previousLane = 'bottom';
-
-  return sortedItems.map(item => {
-    const isClose = item.minutes - previousMinute <= DAILY_OVERLAP_THRESHOLD_MINUTES;
-    const lane = isClose ? (previousLane === 'top' ? 'bottom' : 'top') : 'top';
-
-    previousMinute = item.minutes;
-    previousLane = lane;
-
-    return {
-      ...item,
-      lane,
+    return moodEntries.map(({ moodMeta }) => ({
+      id: `hour-${hour}-${moodMeta.value}`,
+      icon: moodMeta.icon,
+      timeLabel,
+      accessibleLabel: `${timeLabel} · ${moodMeta.label}`,
       style: {
-        ...item.style,
+        '--hour-index': hour,
+        '--mood-level': moodMeta.level,
       },
-    };
+    }));
   });
 });
 
@@ -894,55 +911,72 @@ function goBack() {
 
 .daily-axis {
   position: relative;
-  padding: 40px 0;
+  padding: 24px 16px 32px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 246, 214, 0.32) 0%, rgba(255, 246, 214, 0.08) 100%);
+  --daily-hour-width: calc(100% / 24);
+}
+
+.daily-canvas {
+  position: relative;
+  height: 240px;
+}
+
+.daily-canvas::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(31, 26, 23, 0.12);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.daily-spectrum {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.daily-spectrum-band {
+  background: rgba(255, 246, 214, 0.14);
+  border-top: 1px dashed rgba(31, 26, 23, 0.08);
+}
+
+.daily-spectrum-band:nth-child(even) {
+  background: rgba(255, 246, 214, 0.24);
+}
+
+.daily-spectrum-band:first-child {
+  border-top: none;
 }
 
 .daily-track {
-  position: relative;
-  height: 4px;
-  background: rgba(31, 26, 23, 0.12);
-  border-radius: 999px;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
 }
 
 .daily-entry {
-  --lane-offset: -32px;
   position: absolute;
-  top: 50%;
-  left: clamp(48px, var(--entry-position, 50%), calc(100% - 48px));
-  transform: translate(
-    calc(-50% + var(--stack-offset, 0px)),
-    calc(-50% + var(--lane-offset, -32px))
+  top: calc((5 - var(--mood-level)) * 20%);
+  left: clamp(
+    16px,
+    calc(var(--hour-index) * var(--daily-hour-width) + var(--daily-hour-width) / 2 + var(--stack-offset, 0px)),
+    calc(100% - 16px)
   );
+  transform: translate(-50%, -45%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   pointer-events: none;
-}
-
-.daily-entry::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  width: 1px;
-  background: rgba(31, 26, 23, 0.16);
-  transform: translateX(-50%);
-  top: calc(50% + 18px);
-  height: calc(16px - var(--lane-offset, -32px));
-}
-
-.daily-entry--top {
-  --lane-offset: -32px;
-}
-
-.daily-entry--bottom {
-  --lane-offset: 32px;
-}
-
-.daily-entry--bottom::before {
-  top: auto;
-  bottom: calc(50% + 18px);
-  height: calc(16px + var(--lane-offset, 32px));
 }
 
 .daily-emoji {
@@ -963,6 +997,33 @@ function goBack() {
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.daily-ticks {
+  position: relative;
+  margin-top: 16px;
+  height: 32px;
+}
+
+.daily-tick {
+  position: absolute;
+  left: calc(var(--hour-index) * var(--daily-hour-width) + var(--daily-hour-width) / 2);
+  bottom: 0;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #6f665e;
+  text-align: center;
+}
+
+.daily-tick::before {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 10px;
+  margin: 0 auto 6px;
+  background: rgba(31, 26, 23, 0.2);
+  border-radius: 999px;
 }
 
 .daily-empty {
