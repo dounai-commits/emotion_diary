@@ -40,6 +40,7 @@ const routes = [
     path: '/insights',
     name: 'insights',
     component: () => import('../views/TrendInsights.vue'),
+    meta: { showBottomNav: true },
   },
   {
     path: '/settings',
