@@ -9,7 +9,7 @@
       </header>
       <p class="insights-intro">看看最近的心情节奏，找到属于自己的小趋势。</p>
 
-      <section class="insights-card" aria-labelledby="calendar-title">
+      <section class="insights-card calendar-card" aria-labelledby="calendar-title">
         <div class="insights-card-header">
           <div>
             <h2 id="calendar-title">心情日历</h2>
@@ -54,8 +54,20 @@
               class="weekly-cell"
               :class="{ 'is-today': day.isToday, 'has-entry': day.hasEntries }"
             >
-              <div class="mood-bubble" :style="day.moodStyle" aria-hidden="true">
-                <span>{{ day.moodIcon }}</span>
+              <div class="mood-stack">
+                <span class="sr-only">{{ day.accessibleMoodLabel }}</span>
+                <span
+                  v-for="item in day.moodStack"
+                  :key="item.value"
+                  class="mood-stack-item"
+                  :style="item.style"
+                  aria-hidden="true"
+                >
+                  {{ item.icon }}
+                </span>
+                <span v-if="!day.moodStack.length" class="mood-stack-item mood-stack-item--empty" aria-hidden="true">
+                  ·
+                </span>
               </div>
               <div class="day-number">{{ day.dayNumber }}</div>
             </div>
@@ -79,8 +91,20 @@
                 }"
               >
                 <span class="day-number">{{ day.dayNumber }}</span>
-                <div class="mood-bubble" :style="day.moodStyle" aria-hidden="true">
-                  <span>{{ day.moodIcon }}</span>
+                <div class="mood-stack">
+                  <span class="sr-only">{{ day.accessibleMoodLabel }}</span>
+                  <span
+                    v-for="item in day.moodStack"
+                    :key="item.value"
+                    class="mood-stack-item"
+                    :style="item.style"
+                    aria-hidden="true"
+                  >
+                    {{ item.icon }}
+                  </span>
+                  <span v-if="!day.moodStack.length" class="mood-stack-item mood-stack-item--empty" aria-hidden="true">
+                    ·
+                  </span>
                 </div>
               </div>
             </div>
@@ -205,25 +229,57 @@ function isSameDay(dateA, dateB) {
   );
 }
 
-function pickDominantMood(entries) {
+function summarizeDayMoods(entries, limit = 3) {
   if (!entries.length) {
-    return null;
+    return {
+      stack: [],
+      label: '暂无心情记录',
+    };
   }
 
   const counts = entries.reduce((acc, entry) => {
     const mood = entry.mood || 'neutral';
-    acc[mood] = (acc[mood] || 0) + 1;
+    acc.set(mood, (acc.get(mood) || 0) + 1);
     return acc;
-  }, {});
+  }, new Map());
 
-  const dominantMood = Object.entries(counts).sort((a, b) => {
+  const sorted = [...counts.entries()].sort((a, b) => {
     if (b[1] === a[1]) {
       return (moodScores[b[0]] || 0) - (moodScores[a[0]] || 0);
     }
     return b[1] - a[1];
-  })[0][0];
+  });
 
-  return getMoodMeta(dominantMood);
+  const stackSource = sorted.slice(0, limit).map(([value]) => getMoodMeta(value));
+  const stackSize = stackSource.length;
+  const stack = stackSource.map((meta, index) => {
+    const offset = (index - (stackSize - 1) / 2) * 12;
+    return {
+      ...meta,
+      style: {
+        backgroundColor: meta.background,
+        color: meta.color,
+        zIndex: stackSize - index,
+        transform: `translate(-50%, -50%) translateX(${offset}px)`,
+      },
+    };
+  });
+
+  const label = sorted
+    .map(([value, count]) => {
+      const meta = getMoodMeta(value);
+      return `${meta.label} ${count}次`;
+    })
+    .join('、');
+
+  return { stack, label };
+}
+
+function formatAccessibleDate(date) {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const weekday = weekdays[date.getDay()];
+  return `${month}月${day}日（周${weekday}）`;
 }
 
 const diariesByDate = computed(() => {
@@ -286,7 +342,7 @@ const weeklyDays = computed(() => {
     date.setDate(start.getDate() + index);
     const key = toDateKey(date);
     const entries = diariesByDate.value.get(key) || [];
-    const mood = pickDominantMood(entries);
+    const summary = summarizeDayMoods(entries);
     days.push({
       key,
       date,
@@ -294,10 +350,8 @@ const weeklyDays = computed(() => {
       weekday: date.getDay(),
       isToday: isSameDay(date, today),
       hasEntries: entries.length > 0,
-      moodIcon: mood ? mood.icon : '—',
-      moodStyle: mood
-        ? { backgroundColor: mood.background, color: mood.color }
-        : { backgroundColor: 'rgba(31, 26, 23, 0.08)', color: '#71665d' },
+      moodStack: summary.stack,
+      accessibleMoodLabel: `${formatAccessibleDate(date)}：${summary.label}`,
     });
   }
   return days;
@@ -313,7 +367,7 @@ function buildMonthlyGrid() {
     const date = new Date(cursor);
     const key = toDateKey(date);
     const entries = diariesByDate.value.get(key) || [];
-    const mood = pickDominantMood(entries);
+    const summary = summarizeDayMoods(entries);
     days.push({
       key,
       date,
@@ -321,10 +375,8 @@ function buildMonthlyGrid() {
       inCurrentMonth: date.getMonth() === startMonth.getMonth(),
       isToday: isSameDay(date, today),
       hasEntries: entries.length > 0,
-      moodIcon: mood ? mood.icon : '·',
-      moodStyle: mood
-        ? { backgroundColor: mood.background, color: mood.color }
-        : { backgroundColor: 'rgba(31, 26, 23, 0.06)', color: '#9a918a' },
+      moodStack: summary.stack,
+      accessibleMoodLabel: `${formatAccessibleDate(date)}：${summary.label}`,
     });
   }
 
@@ -382,16 +434,24 @@ const topMoodState = computed(() => {
     return { text: '暂无数据', muted: true };
   }
 
-  const [moodValue, count] = [...moodCounts.entries()].sort((a, b) => {
+  const sorted = [...moodCounts.entries()].sort((a, b) => {
     if (b[1] === a[1]) {
       return (moodScores[b[0]] || 0) - (moodScores[a[0]] || 0);
     }
     return b[1] - a[1];
-  })[0];
+  });
 
-  const moodMeta = getMoodMeta(moodValue);
-  const label = moodMeta?.label || '未知心情';
-  return { text: `${label} · ${count}次`, muted: false };
+  const topCount = sorted[0][1];
+  const topMoods = sorted
+    .filter(([, count]) => count === topCount)
+    .map(([value, count]) => {
+      const moodMeta = getMoodMeta(value);
+      const icon = moodMeta?.icon || '';
+      const label = moodMeta?.label || '未知心情';
+      return `${icon ? `${icon} ` : ''}${label} · ${count}次`;
+    });
+
+  return { text: topMoods.join(' / '), muted: false };
 });
 
 const topEmotionState = computed(() => {
@@ -413,8 +473,19 @@ const topEmotionState = computed(() => {
     return { text: '暂无数据', muted: true };
   }
 
-  const [emotion, count] = [...emotionCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  return { text: `${emotion} · ${count}次`, muted: false };
+  const sorted = [...emotionCounts.entries()].sort((a, b) => {
+    if (b[1] === a[1]) {
+      return a[0].localeCompare(b[0], 'zh-Hans-CN');
+    }
+    return b[1] - a[1];
+  });
+
+  const topCount = sorted[0][1];
+  const topEmotions = sorted
+    .filter(([, count]) => count === topCount)
+    .map(([emotion, count]) => `${emotion} · ${count}次`);
+
+  return { text: topEmotions.join(' / '), muted: false };
 });
 
 const aiTriggers = ref([]);
@@ -486,7 +557,7 @@ watch(
         return;
       }
       aiTriggers.value = insights.triggers;
-      aiSummary.value = insights.summary;
+      aiSummary.value = normalizeSummary(insights.summary);
       aiError.value = '';
     } catch (error) {
       if (requestId !== aiRequestId) {
@@ -507,6 +578,21 @@ function truncateText(value, limit = 400) {
     return '';
   }
   return value.length > limit ? value.slice(0, limit) : value;
+}
+
+function normalizeSummary(value) {
+  if (!value) {
+    return '';
+  }
+
+  const sanitized = value
+    .split('\n')
+    .map(line => line.trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return sanitized;
 }
 
 function formatDiaryForPrompt(entry, index) {
@@ -671,6 +757,11 @@ function goBack() {
   gap: 24px;
 }
 
+.calendar-card {
+  padding: 20px;
+  gap: 20px;
+}
+
 .insights-card-header {
   display: flex;
   justify-content: space-between;
@@ -744,23 +835,23 @@ function goBack() {
   font-size: 13px;
   color: #9a918a;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .weekly-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .weekly-cell {
   background: rgba(31, 26, 23, 0.04);
-  border-radius: 20px;
-  padding: 12px 8px;
+  border-radius: 18px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -773,14 +864,31 @@ function goBack() {
   outline-offset: 3px;
 }
 
-.mood-bubble {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+.mood-stack {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.mood-stack-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
+  box-shadow: 0 14px 24px rgba(31, 26, 23, 0.08);
+  border: 1px solid rgba(31, 26, 23, 0.06);
+  transition: transform 0.2s ease;
+}
+
+.mood-stack-item--empty {
+  background: rgba(31, 26, 23, 0.08);
+  color: #71665d;
 }
 
 .day-number {
@@ -791,25 +899,25 @@ function goBack() {
 .monthly-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .monthly-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .monthly-cell {
   background: rgba(31, 26, 23, 0.03);
   border-radius: 18px;
-  padding: 10px 8px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  min-height: 72px;
+  min-height: 64px;
 }
 
 .monthly-cell.is-outside {

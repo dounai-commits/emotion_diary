@@ -6,7 +6,7 @@
       :class="{ active: route.name === 'home' }"
       aria-label="查看心情日志列表"
     >
-      <span class="bottom-nav-label">列表</span>
+      <span class="bottom-nav-label">首页</span>
     </RouterLink>
 
     <RouterLink
@@ -15,7 +15,8 @@
       :class="{ active: route.name === 'newDiary' }"
       aria-label="新建心情日志"
     >
-      <span class="bottom-nav-label">新建</span>
+      <span class="bottom-nav-icon" aria-hidden="true">＋</span>
+      <span class="sr-only">新建心情日志</span>
     </RouterLink>
 
     <RouterLink
