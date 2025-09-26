@@ -77,7 +77,7 @@
                 v-for="tick in dailyTicks"
                 :key="tick.hour"
                 class="daily-tick"
-                :style="{ '--hour-index': tick.hour }"
+                :style="{ '--hour-index': tick.position }"
               >
                 {{ tick.label }}
               </div>
@@ -221,10 +221,11 @@ const moodLevelMap = moodLevels.reduce((acc, option) => {
 
 const defaultMoodLevel = moodLevelMap.neutral || moodLevels[Math.floor(moodLevels.length / 2)];
 
-const dailyTickHours = [4, 8, 12, 16, 20];
+const dailyTickHours = [0, 6, 12, 18, 24];
 const dailyTicks = dailyTickHours.map(hour => ({
   hour,
   label: `${String(hour).padStart(2, '0')}:00`,
+  position: hour >= 24 ? 23.999 : hour,
 }));
 
 const today = new Date();
