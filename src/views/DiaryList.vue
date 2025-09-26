@@ -45,9 +45,6 @@
         </ul>
       </div>
 
-      <RouterLink v-if="diaries.length" to="/new" class="fab" aria-label="新建心情日志">
-        <span class="fab-icon">✏️</span>
-      </RouterLink>
     </div>
 
     <ConfirmDialog
