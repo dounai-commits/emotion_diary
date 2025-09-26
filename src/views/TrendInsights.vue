@@ -69,7 +69,6 @@
                 >
                   <span class="sr-only">{{ item.accessibleLabel }}</span>
                   <span class="daily-emoji" aria-hidden="true">{{ item.icon }}</span>
-                  <span class="daily-time">{{ item.timeLabel }}</span>
                 </div>
               </div>
             </div>
@@ -222,7 +221,7 @@ const moodLevelMap = moodLevels.reduce((acc, option) => {
 
 const defaultMoodLevel = moodLevelMap.neutral || moodLevels[Math.floor(moodLevels.length / 2)];
 
-const dailyTickHours = [8, 12, 16, 20];
+const dailyTickHours = [4, 8, 12, 16, 20];
 const dailyTicks = dailyTickHours.map(hour => ({
   hour,
   label: `${String(hour).padStart(2, '0')}:00`,
@@ -973,30 +972,13 @@ function goBack() {
   );
   transform: translate(-50%, -45%);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
   pointer-events: none;
 }
 
 .daily-emoji {
   font-size: 32px;
   filter: drop-shadow(0 8px 14px rgba(31, 26, 23, 0.16));
-}
-
-.daily-time {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1f1a17;
-  background: #fff6d6;
-  border-radius: 999px;
-  padding: 4px 10px;
-  box-shadow: 0 12px 24px rgba(31, 26, 23, 0.12);
-  white-space: nowrap;
-  max-width: 140px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .daily-ticks {
