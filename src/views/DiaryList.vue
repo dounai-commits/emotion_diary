@@ -72,10 +72,8 @@ const confirmOpen = ref(false);
 const pendingDeleteId = ref('');
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  weekday: 'short',
   month: 'long',
   day: 'numeric',
-  year: 'numeric',
 });
 
 function formatDate(value) {

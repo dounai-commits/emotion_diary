@@ -505,7 +505,8 @@ button {
 }
 
 .form-field input,
-.form-field textarea {
+.form-field textarea,
+.form-field select {
   width: 100%;
   padding: 12px 14px;
   border-radius: 16px;
@@ -518,10 +519,40 @@ button {
 }
 
 .form-field input:focus,
-.form-field textarea:focus {
+.form-field textarea:focus,
+.form-field select:focus {
   border-color: rgba(255, 184, 77, 0.9);
   box-shadow: 0 0 0 3px rgba(255, 184, 77, 0.25);
   background: #ffffff;
+}
+
+.form-field--datetime .datetime-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.form-field--datetime input[type='date'] {
+  flex: 1 1 180px;
+}
+
+.time-selectors {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-selectors select {
+  width: auto;
+  min-width: 72px;
+  padding-inline: 12px;
+  text-align: center;
+}
+
+.time-separator {
+  font-weight: 600;
+  color: #493f38;
 }
 
 .chip-group {
@@ -924,6 +955,25 @@ button {
   color: #4b433d;
   z-index: 10;
   backdrop-filter: blur(12px);
+}
+
+@media (min-width: 1024px) {
+  .bottom-nav {
+    bottom: calc(env(safe-area-inset-bottom, 0));
+    width: min(720px, 100%);
+    transform: translateX(-50%);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    box-shadow: 0 -10px 36px rgba(31, 26, 23, 0.12);
+    padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0));
+  }
+
+  .page {
+    padding-bottom: calc(200px + env(safe-area-inset-bottom, 0));
+  }
 }
 
 .bottom-nav-item {
