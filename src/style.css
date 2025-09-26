@@ -933,7 +933,7 @@ button {
   padding: 8px 12px;
   border-radius: 12px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: inherit;
   transition: background 0.2s ease, color 0.2s ease;
 }
@@ -950,9 +950,21 @@ button {
   line-height: 1.2;
 }
 
-.bottom-nav-item.active {
-  background: #1f1a17;
-  color: #ffffff;
+.bottom-nav-item:not(.bottom-nav-item--primary) {
+  background: transparent;
+}
+
+.bottom-nav-item:not(.bottom-nav-item--primary) .bottom-nav-label {
+  font-weight: 500;
+}
+
+.bottom-nav-item:not(.bottom-nav-item--primary).active {
+  background: transparent;
+  color: #2f261b;
+}
+
+.bottom-nav-item:not(.bottom-nav-item--primary).active .bottom-nav-label {
+  font-weight: 700;
 }
 
 .bottom-nav-item--primary {

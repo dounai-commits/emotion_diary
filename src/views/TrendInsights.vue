@@ -13,7 +13,6 @@
         <div class="insights-card-header">
           <div>
             <h2 id="calendar-title">心情日历</h2>
-            <p class="insights-card-subtitle">切换周/月视图，追踪每天的心情波动。</p>
           </div>
           <div class="view-toggle" role="tablist" aria-label="时间粒度切换">
             <button
@@ -763,12 +762,6 @@ function goBack() {
   gap: 16px;
 }
 
-.insights-card-subtitle {
-  margin: 4px 0 0;
-  color: #8a8078;
-  font-size: 14px;
-}
-
 .view-toggle {
   background: rgba(31, 26, 23, 0.06);
   border-radius: 999px;
@@ -903,10 +896,17 @@ function goBack() {
   padding: 10px 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   min-height: 64px;
+}
+
+.monthly-cell .day-number {
+  order: -1;
+}
+
+.monthly-cell .mood-stack {
+  order: 1;
 }
 
 .monthly-cell.is-outside {
@@ -994,7 +994,7 @@ function goBack() {
 
 @media (min-width: 768px) {
   .metrics-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 </style>
