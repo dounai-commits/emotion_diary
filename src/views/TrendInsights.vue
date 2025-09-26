@@ -1,10 +1,13 @@
 <template>
   <div class="page insights-page">
     <div class="page-inner insights-inner">
-      <header class="insights-hero">
+      <header class="insights-header">
+        <button type="button" class="insights-back" @click="goBack" aria-label="返回首页">
+          ←
+        </button>
         <h1>趋势分析</h1>
-        <p>看看最近的心情节奏，找到属于自己的小趋势。</p>
       </header>
+      <p class="insights-intro">看看最近的心情节奏，找到属于自己的小趋势。</p>
 
       <section class="insights-card" aria-labelledby="calendar-title">
         <div class="insights-card-header">
@@ -85,28 +88,48 @@
         </div>
       </section>
 
+      <section class="insights-card" aria-labelledby="ai-summary-title">
+        <div class="insights-card-header">
+          <h2 id="ai-summary-title">AI 总结</h2>
+        </div>
+        <p
+          class="ai-summary-text"
+          :class="{ 'ai-summary-text--muted': aiSummaryState.muted }"
+        >
+          {{ aiSummaryState.text }}
+        </p>
+      </section>
+
       <section class="insights-card" aria-labelledby="metrics-title">
         <div class="insights-card-header">
           <div>
             <h2 id="metrics-title">关键指标</h2>
-            <p class="insights-card-subtitle">这些数据来自当前所选时间段。</p>
           </div>
         </div>
         <div class="metrics-grid" role="list">
           <article class="metric-card" role="listitem">
-            <h3 class="metric-title">平均心情</h3>
-            <p class="metric-value">{{ averageMoodDisplay }}</p>
-            <p class="metric-hint">数字越高说明整体心情越晴朗。</p>
+            <h3 class="metric-title">最常出现的心情</h3>
+            <p class="metric-value" :class="{ 'metric-value--muted': topMoodState.muted }">
+              {{ topMoodState.text }}
+            </p>
           </article>
           <article class="metric-card" role="listitem">
-            <h3 class="metric-title">常见情绪词</h3>
-            <p class="metric-value">{{ frequentEmotionDisplay }}</p>
-            <p class="metric-hint">来自日志中提到的感受关键词。</p>
+            <h3 class="metric-title">最常出现的感受</h3>
+            <p
+              class="metric-value"
+              :class="{ 'metric-value--muted': topEmotionState.muted }"
+            >
+              {{ topEmotionState.text }}
+            </p>
           </article>
           <article class="metric-card" role="listitem">
-            <h3 class="metric-title">高频影响因素</h3>
-            <p class="metric-value">{{ topFactorsDisplay }}</p>
-            <p class="metric-hint">结合心理与身体线索的出现频次。</p>
+            <h3 class="metric-title">高频触发场景</h3>
+            <p
+              class="metric-value"
+              :class="{ 'metric-value--muted': triggerAnalysisState.muted }"
+            >
+              {{ triggerAnalysisState.text }}
+            </p>
           </article>
         </div>
       </section>
@@ -117,11 +140,16 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useDiaryStore } from '../stores/diaryStore.js';
+import { useSettingsStore } from '../stores/settingsStore.js';
 import { getMoodMeta, moodOptions } from '../utils/moods.js';
 
 const { diaries } = useDiaryStore();
+const router = useRouter();
+const { apiKey } = useSettingsStore();
+const hasApiKey = computed(() => Boolean(apiKey.value));
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const moodScores = moodOptions.reduce((acc, option, index) => {
@@ -338,19 +366,35 @@ const rangeDiaries = computed(() => {
   });
 });
 
-const averageMoodDisplay = computed(() => {
+const topMoodState = computed(() => {
   const entries = rangeDiaries.value;
   if (!entries.length) {
-    return '暂无数据';
+    return { text: '暂无数据', muted: true };
   }
-  const totalScore = entries.reduce((sum, entry) => sum + (moodScores[entry.mood] || moodScores.neutral), 0);
-  const average = totalScore / entries.length;
-  const index = Math.min(moodOptions.length - 1, Math.max(0, Math.round(average - 1)));
-  const mood = moodOptions[index];
-  return `${mood.icon} ${mood.label}`;
+
+  const moodCounts = entries.reduce((acc, entry) => {
+    const value = entry.mood || 'neutral';
+    acc.set(value, (acc.get(value) || 0) + 1);
+    return acc;
+  }, new Map());
+
+  if (!moodCounts.size) {
+    return { text: '暂无数据', muted: true };
+  }
+
+  const [moodValue, count] = [...moodCounts.entries()].sort((a, b) => {
+    if (b[1] === a[1]) {
+      return (moodScores[b[0]] || 0) - (moodScores[a[0]] || 0);
+    }
+    return b[1] - a[1];
+  })[0];
+
+  const moodMeta = getMoodMeta(moodValue);
+  const label = moodMeta?.label || '未知心情';
+  return { text: `${label} · ${count}次`, muted: false };
 });
 
-const frequentEmotionDisplay = computed(() => {
+const topEmotionState = computed(() => {
   const entries = rangeDiaries.value;
   const emotionCounts = new Map();
 
@@ -366,37 +410,212 @@ const frequentEmotionDisplay = computed(() => {
   });
 
   if (!emotionCounts.size) {
-    return '暂无数据';
+    return { text: '暂无数据', muted: true };
   }
 
-  const [topEmotion] = [...emotionCounts.entries()].sort((a, b) => b[1] - a[1]);
-  return topEmotion[0];
+  const [emotion, count] = [...emotionCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  return { text: `${emotion} · ${count}次`, muted: false };
 });
 
-const topFactorsDisplay = computed(() => {
-  const entries = rangeDiaries.value;
-  const factorCounts = new Map();
+const aiTriggers = ref([]);
+const aiSummary = ref('');
+const aiLoading = ref(false);
+const aiError = ref('');
+let aiRequestId = 0;
 
-  entries.forEach(entry => {
-    [...(entry.psychological || []), ...(entry.physiological || [])]
-      .map(item => (typeof item === 'string' ? item.trim() : ''))
-      .filter(Boolean)
-      .forEach(label => {
-        factorCounts.set(label, (factorCounts.get(label) || 0) + 1);
-      });
+const triggerAnalysisState = computed(() => {
+  if (!rangeDiaries.value.length) {
+    return { text: '暂无数据', muted: true };
+  }
+  if (!hasApiKey.value) {
+    return { text: '需要配置 API Key', muted: true };
+  }
+  if (aiLoading.value) {
+    return { text: 'AI 分析中…', muted: true };
+  }
+  if (aiError.value) {
+    return { text: aiError.value, muted: true };
+  }
+  if (!aiTriggers.value.length) {
+    return { text: '暂无结果', muted: true };
+  }
+  return { text: aiTriggers.value.join('、'), muted: false };
+});
+
+const aiSummaryState = computed(() => {
+  if (!rangeDiaries.value.length) {
+    return { text: '暂无数据', muted: true };
+  }
+  if (!hasApiKey.value) {
+    return { text: '需要配置 API Key', muted: true };
+  }
+  if (aiLoading.value) {
+    return { text: 'AI 分析中…', muted: true };
+  }
+  if (aiError.value) {
+    return { text: aiError.value, muted: true };
+  }
+  if (!aiSummary.value) {
+    return { text: '暂无结果', muted: true };
+  }
+  return { text: aiSummary.value, muted: false };
+});
+
+const AI_SYSTEM_PROMPT = `你是一位温暖、理性的情绪陪伴助理。请用中文输出一个 JSON，对象必须包含两个键：
+"triggers"：一个字符串数组，列出 1-3 个最容易激发用户情绪波动的场景或模式；
+"summary"：一段不超过 400 个中文字符的总结，概述该时间段的情绪状态和记录习惯。请避免提供建议或使用列表符号。`;
+
+watch(
+  [() => rangeDiaries.value, () => hasApiKey.value, () => periodLabel.value],
+  async ([entries, keyAvailable, label]) => {
+    aiError.value = '';
+    aiTriggers.value = [];
+    aiSummary.value = '';
+
+    if (!entries.length || !keyAvailable) {
+      aiLoading.value = false;
+      return;
+    }
+
+    aiLoading.value = true;
+    const requestId = ++aiRequestId;
+
+    try {
+      const insights = await requestAiInsights(entries, label);
+      if (requestId !== aiRequestId) {
+        return;
+      }
+      aiTriggers.value = insights.triggers;
+      aiSummary.value = insights.summary;
+      aiError.value = '';
+    } catch (error) {
+      if (requestId !== aiRequestId) {
+        return;
+      }
+      aiError.value = error instanceof Error ? error.message : 'AI 分析失败，请稍后再试试～';
+    } finally {
+      if (requestId === aiRequestId) {
+        aiLoading.value = false;
+      }
+    }
+  },
+  { immediate: true, deep: true },
+);
+
+function truncateText(value, limit = 400) {
+  if (!value) {
+    return '';
+  }
+  return value.length > limit ? value.slice(0, limit) : value;
+}
+
+function formatDiaryForPrompt(entry, index) {
+  const date = new Date(entry.createdAt);
+  const dateLabel = Number.isNaN(date.getTime())
+    ? '未知日期'
+    : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date
+        .getDate())
+        .padStart(2, '0')}`;
+
+  const moodMeta = getMoodMeta(entry.mood || 'neutral');
+  return `日志${index}：\n日期：${dateLabel}\n心情：${moodMeta.label}（${entry.mood || 'neutral'}）\n事件：${
+    entry.fact || '未填写'
+  }\n感受：${entry.emotions || '未填写'}\n心理线索：${
+    (entry.psychological || []).join('、') || '未填写'
+  }\n身体线索：${(entry.physiological || []).join('、') || '未填写'}\n想法：${
+    entry.thoughts || '未填写'
+  }\n行为：${entry.behaviors || '未填写'}\n结果：${entry.consequences || '未填写'}`;
+}
+
+function buildAiMessages(entries, label) {
+  const details = entries.map((entry, index) => formatDiaryForPrompt(entry, index + 1)).join('\n\n');
+  const intro = `请分析时间范围「${label}」内的 ${entries.length} 篇日志，找出高频触发场景并总结情绪状态。`;
+  return [
+    { role: 'system', content: AI_SYSTEM_PROMPT },
+    {
+      role: 'user',
+      content: `${intro}\n\n${details}\n\n请直接返回严格的 JSON，例如 {"triggers": [""], "summary": ""}。`,
+    },
+  ];
+}
+
+function parseAiInsights(text) {
+  if (!text) {
+    throw new Error('AI 没有返回内容');
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error('AI 返回内容无法解析');
+    }
+    parsed = JSON.parse(match[0]);
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new Error('AI 返回内容无法解析');
+  }
+
+  const triggerList = Array.isArray(parsed.triggers) ? parsed.triggers : [];
+  const summaryText = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
+
+  const normalizedTriggers = triggerList
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .map(item => (item.length > 16 ? `${item.slice(0, 15)}…` : item));
+
+  return {
+    triggers: normalizedTriggers,
+    summary: truncateText(summaryText, 400),
+  };
+}
+
+async function requestOpenAI(messages) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey.value}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: 0.6,
+    }),
   });
 
-  if (!factorCounts.size) {
-    return '暂无记录';
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    data = null;
   }
 
-  const topFactors = [...factorCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 2)
-    .map(item => item[0]);
+  if (!response.ok) {
+    const message = data?.error?.message || response.statusText || 'AI 服务暂时不可用';
+    throw new Error(message);
+  }
 
-  return topFactors.join('、');
-});
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('AI 没有返回内容');
+  }
+
+  return content.trim();
+}
+
+async function requestAiInsights(entries, label) {
+  const messages = buildAiMessages(entries, label);
+  const reply = await requestOpenAI(messages);
+  return parseAiInsights(reply);
+}
+
+function goBack() {
+  router.push({ name: 'home' });
+}
 </script>
 
 <style scoped>
@@ -404,20 +623,40 @@ const topFactorsDisplay = computed(() => {
   gap: 24px;
 }
 
-.insights-hero {
+.insights-header {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
 }
 
-.insights-hero h1 {
+.insights-header h1 {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
 }
 
-.insights-hero p {
-  margin: 0;
+.insights-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 26, 23, 0.1);
+  background: #ffffff;
+  color: #1f1a17;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.insights-back:hover {
+  background: rgba(31, 26, 23, 0.06);
+  border-color: rgba(31, 26, 23, 0.18);
+}
+
+.insights-intro {
+  margin: 0 0 8px;
   color: #675f58;
   font-size: 15px;
 }
@@ -614,10 +853,26 @@ const topFactorsDisplay = computed(() => {
   color: #3a312b;
 }
 
+.metric-value--muted {
+  color: #8a8078;
+}
+
 .metric-hint {
   margin: 0;
   font-size: 13px;
   color: #9a918a;
+}
+
+.ai-summary-text {
+  margin: 0;
+  color: #3a312b;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.ai-summary-text--muted {
+  color: #8a8078;
 }
 
 .insights-empty {

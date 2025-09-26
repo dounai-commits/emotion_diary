@@ -910,51 +910,51 @@ button {
 .bottom-nav {
   position: fixed;
   left: 50%;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0));
   transform: translateX(-50%);
   width: min(100% - 32px, 420px);
-  background: #1f1a17;
-  border-radius: 28px;
-  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(31, 26, 23, 0.08);
+  border-radius: 18px;
+  padding: 6px 8px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  box-shadow: 0 28px 65px rgba(31, 26, 23, 0.35);
-  color: rgba(255, 255, 255, 0.78);
+  gap: 8px;
+  box-shadow: 0 12px 32px rgba(31, 26, 23, 0.16);
+  color: #4b433d;
   z-index: 10;
+  backdrop-filter: blur(12px);
 }
 
 .bottom-nav-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 20px;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 12px;
   font-size: 13px;
   font-weight: 600;
   color: inherit;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.bottom-nav-item .bottom-nav-icon {
-  font-size: 20px;
+.bottom-nav-label {
+  line-height: 1.2;
 }
 
 .bottom-nav-item.active {
-  background: rgba(255, 215, 112, 0.18);
-  color: #ffd770;
-  transform: translateY(-2px);
+  background: #1f1a17;
+  color: #ffffff;
 }
 
 .bottom-nav-item--primary {
-  background: linear-gradient(135deg, #ffd369, #ffb84d);
-  color: #3a2d1f;
+  background: #ffd369;
+  color: #2f261b;
 }
 
 .bottom-nav-item--primary.active {
-  background: linear-gradient(135deg, #ffe082, #ffd369);
-  color: #3a2d1f;
+  background: #ffcc5d;
+  color: #2f261b;
 }
 
 @media (min-width: 768px) {
