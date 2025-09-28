@@ -1,5 +1,5 @@
 <template>
-  <div class="page home-page">
+  <div class="page home-page" @click="handleBackgroundTap">
     <div class="page-inner">
       <header class="home-hero">
         <div class="home-hero-top">
@@ -24,45 +24,48 @@
             v-for="entry in diaries"
             :key="entry.id"
             class="entry-item"
-            @contextmenu.prevent="openActions(entry)"
+            :data-entry-id="entry.id"
+            :class="{ 'entry-item--actions': isMobile && openActionId === entry.id }"
           >
-            <RouterLink
-              :to="`/diary/${entry.id}`"
-              class="entry-card"
-              @mousedown="startPress(entry, $event)"
-              @touchstart.passive="startPress(entry, $event)"
-              @mouseup="cancelPress"
-              @mouseleave="cancelPress"
-              @touchend="cancelPress"
-              @touchcancel="cancelPress"
-              @click="handleCardClick($event)"
+            <div
+              class="entry-swipe-wrapper"
+              :data-entry-id="entry.id"
+              @touchstart="handleTouchStart(entry.id, $event)"
+              @touchmove="handleTouchMove(entry.id, $event)"
+              @touchend="handleTouchEnd(entry.id)"
+              @touchcancel="resetTouchState"
             >
-              <div
-                class="entry-avatar"
-                :style="{ backgroundColor: getMoodMeta(entry.mood).background, color: getMoodMeta(entry.mood).color }"
-                aria-hidden="true"
+              <RouterLink
+                :to="`/diary/${entry.id}`"
+                class="entry-card"
+                @click="handleCardClick(entry.id, $event)"
               >
-                {{ getMoodMeta(entry.mood).icon }}
-              </div>
-              <div class="entry-body">
-                <h3 class="entry-title">{{ entry.fact || '未命名日记' }}</h3>
-                <div class="entry-tags" v-if="extractTags(entry).length">
-                  <span v-for="tag in extractTags(entry)" :key="tag" class="tag">{{ tag }}</span>
+                <div
+                  class="entry-avatar"
+                  :style="{ backgroundColor: getMoodMeta(entry.mood).background, color: getMoodMeta(entry.mood).color }"
+                  aria-hidden="true"
+                >
+                  {{ getMoodMeta(entry.mood).icon }}
                 </div>
-                <time class="entry-date">{{ formatDate(entry.createdAt) }}</time>
+                <div class="entry-body">
+                  <h3 class="entry-title">{{ entry.fact || '未命名日记' }}</h3>
+                  <div class="entry-tags" v-if="extractTags(entry).length">
+                    <span v-for="tag in extractTags(entry)" :key="tag" class="tag">{{ tag }}</span>
+                  </div>
+                  <time class="entry-date">{{ formatDate(entry.createdAt) }}</time>
+                </div>
+              </RouterLink>
+
+              <div v-if="isMobile" class="entry-actions" :aria-hidden="openActionId !== entry.id">
+                <button type="button" class="entry-action-button" @click.stop="goToEdit(entry.id)">✏️ 编辑</button>
+                <button type="button" class="entry-action-button danger" @click.stop="requestDelete(entry.id)">🗑️ 删除</button>
               </div>
-            </RouterLink>
+            </div>
           </li>
         </ul>
       </div>
 
     </div>
-
-    <ActionSheet :open="actionSheetOpen" @close="closeActions">
-      <button type="button" class="action-sheet-button" @click="goToEdit">✏️ 编辑</button>
-      <button type="button" class="action-sheet-button danger" @click="confirmDelete">🗑️ 删除</button>
-      <button type="button" class="action-sheet-button" @click="closeActions">取消</button>
-    </ActionSheet>
 
     <ConfirmDialog
       :open="confirmOpen"
@@ -77,10 +80,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
-import ActionSheet from '../components/ActionSheet.vue';
 import { useDiaryStore } from '../stores/diaryStore.js';
 import { getMoodMeta } from '../utils/moods.js';
 import { splitTags } from '../utils/tags.js';
@@ -90,10 +92,14 @@ const router = useRouter();
 
 const confirmOpen = ref(false);
 const pendingDeleteId = ref('');
-const actionSheetOpen = ref(false);
-const actionTargetId = ref('');
-const longPressTriggered = ref(false);
-let pressTimer = null;
+const openActionId = ref('');
+const isMobile = ref(false);
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchActiveId = '';
+let lastDeltaX = 0;
+let horizontalSwipe = false;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
@@ -101,6 +107,32 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   hour: '2-digit',
   minute: '2-digit',
   hour12: false,
+});
+
+function updateIsMobile() {
+  if (typeof window === 'undefined') {
+    isMobile.value = false;
+    return;
+  }
+
+  isMobile.value = window.matchMedia('(max-width: 768px)').matches;
+
+  if (!isMobile.value) {
+    closeSwipeActions();
+  }
+}
+
+onMounted(() => {
+  updateIsMobile();
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateIsMobile);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateIsMobile);
+  }
 });
 
 function formatDate(value) {
@@ -135,73 +167,9 @@ function extractTags(entry) {
 }
 
 function requestDelete(id) {
+  closeSwipeActions();
   pendingDeleteId.value = id;
   confirmOpen.value = true;
-}
-
-function startPress(entry, event) {
-  if (event.button !== undefined && event.button !== 0) {
-    return;
-  }
-
-  cancelPress();
-
-  pressTimer = setTimeout(() => {
-    pressTimer = null;
-    longPressTriggered.value = true;
-    openActions(entry);
-  }, 450);
-
-  if (event.type === 'touchstart') {
-    longPressTriggered.value = false;
-  }
-}
-
-function cancelPress() {
-  if (pressTimer) {
-    clearTimeout(pressTimer);
-    pressTimer = null;
-  }
-
-  setTimeout(() => {
-    longPressTriggered.value = false;
-  }, 0);
-}
-
-function handleCardClick(event) {
-  if (longPressTriggered.value) {
-    event.preventDefault();
-    event.stopImmediatePropagation?.();
-    cancelPress();
-  }
-}
-
-function openActions(entry) {
-  cancelPress();
-  actionTargetId.value = entry.id;
-  actionSheetOpen.value = true;
-}
-
-function closeActions() {
-  actionSheetOpen.value = false;
-  actionTargetId.value = '';
-  cancelPress();
-}
-
-function goToEdit() {
-  if (!actionTargetId.value) {
-    return;
-  }
-  router.push({ name: 'editDiary', params: { id: actionTargetId.value } });
-  closeActions();
-}
-
-function confirmDelete() {
-  if (!actionTargetId.value) {
-    return;
-  }
-  closeActions();
-  requestDelete(actionTargetId.value);
 }
 
 function closeConfirm() {
@@ -214,5 +182,110 @@ function handleDelete() {
     deleteDiary(pendingDeleteId.value);
   }
   closeConfirm();
+}
+
+function handleTouchStart(entryId, event) {
+  if (!isMobile.value) {
+    return;
+  }
+
+  if (openActionId.value && openActionId.value !== entryId) {
+    closeSwipeActions();
+  }
+
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchActiveId = entryId;
+  lastDeltaX = 0;
+  horizontalSwipe = false;
+}
+
+function handleTouchMove(entryId, event) {
+  if (!isMobile.value || touchActiveId !== entryId) {
+    return;
+  }
+
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = touch.clientY - touchStartY;
+
+  if (!horizontalSwipe) {
+    if (Math.abs(deltaX) > 15 && Math.abs(deltaY) < 20) {
+      horizontalSwipe = true;
+    } else if (Math.abs(deltaY) > 20) {
+      resetTouchState();
+      return;
+    }
+  }
+
+  if (horizontalSwipe) {
+    lastDeltaX = deltaX;
+  }
+}
+
+function handleTouchEnd(entryId) {
+  if (!isMobile.value || touchActiveId !== entryId) {
+    resetTouchState();
+    return;
+  }
+
+  if (horizontalSwipe && lastDeltaX > 50) {
+    openActionId.value = entryId;
+  } else if (horizontalSwipe && lastDeltaX < -30 && openActionId.value === entryId) {
+    closeSwipeActions();
+  }
+
+  resetTouchState();
+}
+
+function resetTouchState() {
+  touchActiveId = '';
+  lastDeltaX = 0;
+  horizontalSwipe = false;
+}
+
+function closeSwipeActions() {
+  openActionId.value = '';
+}
+
+function handleCardClick(entryId, event) {
+  if (!isMobile.value || !openActionId.value) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (openActionId.value !== entryId) {
+    closeSwipeActions();
+    return;
+  }
+
+  closeSwipeActions();
+}
+
+function handleBackgroundTap(event) {
+  if (!isMobile.value || !openActionId.value) {
+    return;
+  }
+
+  const item = event.target.closest('[data-entry-id]');
+  if (!item || item.dataset.entryId !== openActionId.value) {
+    closeSwipeActions();
+  }
+}
+
+function goToEdit(id) {
+  closeSwipeActions();
+  router.push({ name: 'editDiary', params: { id } });
 }
 </script>

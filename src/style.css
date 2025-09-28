@@ -171,6 +171,15 @@ button {
 
 .entry-item {
   list-style: none;
+  position: relative;
+}
+
+.entry-swipe-wrapper {
+  position: relative;
+}
+
+.entry-item--actions .entry-card {
+  box-shadow: 0 22px 50px rgba(31, 26, 23, 0.12);
 }
 
 .entry-card {
@@ -188,6 +197,52 @@ button {
 .entry-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 22px 50px rgba(31, 26, 23, 0.09);
+}
+
+.entry-actions {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  box-shadow: 0 18px 45px rgba(31, 26, 23, 0.1);
+  transform: translateY(-50%) translateX(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.entry-item--actions .entry-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+.entry-action-button {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(255, 214, 105, 0.22);
+  color: #7c5b1d;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.entry-action-button.danger {
+  background: rgba(255, 141, 141, 0.28);
+  color: #c23535;
+}
+
+@media (hover: hover) {
+  .entry-actions {
+    display: none;
+  }
 }
 
 .entry-avatar {
