@@ -106,6 +106,7 @@ import { RouterLink, useRouter } from 'vue-router';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { useDiaryStore } from '../stores/diaryStore.js';
 import { getMoodMeta } from '../utils/moods.js';
+import { splitTags } from '../utils/tags.js';
 
 const props = defineProps({
   id: {
@@ -138,10 +139,7 @@ const emotionTags = computed(() => {
 
   const presetTags = new Set([...(entry.psychological || []), ...(entry.physiological || [])]);
 
-  return entry.emotions
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(tag => tag && !presetTags.has(tag));
+  return splitTags(entry.emotions).filter(tag => !presetTags.has(tag));
 });
 
 function formatFullDate(value) {
