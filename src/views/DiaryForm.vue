@@ -18,12 +18,9 @@
       <form v-else class="form-card" @submit.prevent="handleSubmit">
         <div class="section-heading">现在心情几分？</div>
         <div class="mood-axis" :style="{ '--mood-accent': activeMood.color }">
-          <div class="mood-axis-header">
-            <span class="mood-axis-current">
-              <span class="mood-axis-current-icon">{{ activeMood.icon }}</span>
-              <span>{{ activeMood.label }}</span>
-            </span>
-            <span class="mood-axis-hint">从“糟糕”滑到“好棒棒”试试看</span>
+          <div class="mood-axis-current" aria-live="polite">
+            <span class="mood-axis-current-icon" aria-hidden="true">{{ activeMood.icon }}</span>
+            <span class="mood-axis-current-label">{{ activeMood.label }}</span>
           </div>
           <div class="mood-axis-slider">
             <input
@@ -45,7 +42,7 @@
               :class="{ active: form.mood === option.value }"
               @click="moodIndex = index"
             >
-              <span class="mood-axis-icon">{{ option.icon }}</span>
+              <span class="mood-axis-icon" aria-hidden="true">{{ option.icon }}</span>
               <span class="mood-axis-text">{{ option.label }}</span>
             </button>
           </div>
@@ -156,6 +153,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useDiaryStore } from '../stores/diaryStore.js';
 import { moodOptions } from '../utils/moods.js';
+import { splitTags } from '../utils/tags.js';
 
 const props = defineProps({
   mode: {
@@ -316,10 +314,7 @@ function toggleSelection(list, value) {
 }
 
 function syncEmotionField(value, added) {
-  const tokens = form.emotions
-    .split(',')
-    .map(part => part.trim())
-    .filter(Boolean);
+  const tokens = splitTags(form.emotions);
 
   const existingIndex = tokens.findIndex(token => token === value);
 

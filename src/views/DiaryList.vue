@@ -20,8 +20,23 @@
 
       <div v-else class="entries">
         <ul class="entry-list">
-          <li v-for="entry in diaries" :key="entry.id" class="entry-item">
-            <RouterLink :to="`/diary/${entry.id}`" class="entry-card">
+          <li
+            v-for="entry in diaries"
+            :key="entry.id"
+            class="entry-item"
+            @contextmenu.prevent="openActions(entry)"
+          >
+            <RouterLink
+              :to="`/diary/${entry.id}`"
+              class="entry-card"
+              @mousedown="startPress(entry, $event)"
+              @touchstart.passive="startPress(entry, $event)"
+              @mouseup="cancelPress"
+              @mouseleave="cancelPress"
+              @touchend="cancelPress"
+              @touchcancel="cancelPress"
+              @click="handleCardClick($event)"
+            >
               <div
                 class="entry-avatar"
                 :style="{ backgroundColor: getMoodMeta(entry.mood).background, color: getMoodMeta(entry.mood).color }"
@@ -37,15 +52,17 @@
                 <time class="entry-date">{{ formatDate(entry.createdAt) }}</time>
               </div>
             </RouterLink>
-            <button type="button" class="icon-button" @click="requestDelete(entry.id)">
-              <span aria-hidden="true">🗑️</span>
-              <span class="sr-only">删除这篇日志</span>
-            </button>
           </li>
         </ul>
       </div>
 
     </div>
+
+    <ActionSheet :open="actionSheetOpen" @close="closeActions">
+      <button type="button" class="action-sheet-button" @click="goToEdit">✏️ 编辑</button>
+      <button type="button" class="action-sheet-button danger" @click="confirmDelete">🗑️ 删除</button>
+      <button type="button" class="action-sheet-button" @click="closeActions">取消</button>
+    </ActionSheet>
 
     <ConfirmDialog
       :open="confirmOpen"
@@ -61,15 +78,22 @@
 
 <script setup>
 import { ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import ActionSheet from '../components/ActionSheet.vue';
 import { useDiaryStore } from '../stores/diaryStore.js';
 import { getMoodMeta } from '../utils/moods.js';
+import { splitTags } from '../utils/tags.js';
 
 const { diaries, deleteDiary } = useDiaryStore();
+const router = useRouter();
 
 const confirmOpen = ref(false);
 const pendingDeleteId = ref('');
+const actionSheetOpen = ref(false);
+const actionTargetId = ref('');
+const longPressTriggered = ref(false);
+let pressTimer = null;
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
@@ -96,10 +120,7 @@ function extractTags(entry) {
     .map(tag => (typeof tag === 'string' ? tag.trim() : ''))
     .filter(Boolean);
 
-  const manualTags = (entry.emotions || '')
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(Boolean);
+  const manualTags = splitTags(entry.emotions);
 
   const seen = new Set();
 
@@ -116,6 +137,71 @@ function extractTags(entry) {
 function requestDelete(id) {
   pendingDeleteId.value = id;
   confirmOpen.value = true;
+}
+
+function startPress(entry, event) {
+  if (event.button !== undefined && event.button !== 0) {
+    return;
+  }
+
+  cancelPress();
+
+  pressTimer = setTimeout(() => {
+    pressTimer = null;
+    longPressTriggered.value = true;
+    openActions(entry);
+  }, 450);
+
+  if (event.type === 'touchstart') {
+    longPressTriggered.value = false;
+  }
+}
+
+function cancelPress() {
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+
+  setTimeout(() => {
+    longPressTriggered.value = false;
+  }, 0);
+}
+
+function handleCardClick(event) {
+  if (longPressTriggered.value) {
+    event.preventDefault();
+    event.stopImmediatePropagation?.();
+    cancelPress();
+  }
+}
+
+function openActions(entry) {
+  cancelPress();
+  actionTargetId.value = entry.id;
+  actionSheetOpen.value = true;
+}
+
+function closeActions() {
+  actionSheetOpen.value = false;
+  actionTargetId.value = '';
+  cancelPress();
+}
+
+function goToEdit() {
+  if (!actionTargetId.value) {
+    return;
+  }
+  router.push({ name: 'editDiary', params: { id: actionTargetId.value } });
+  closeActions();
+}
+
+function confirmDelete() {
+  if (!actionTargetId.value) {
+    return;
+  }
+  closeActions();
+  requestDelete(actionTargetId.value);
 }
 
 function closeConfirm() {
